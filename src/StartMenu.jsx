@@ -32,7 +32,6 @@ function StartMenu({ onStart }) {
           Undead Wave
         </h2>
         
-        {/* 리액트에서는 <a> 태그 대신 버튼을 눌러 상태를 바꿉니다 */}
         <button onClick={onStart} id="btn" style={{ marginTop: scrollValue * 1.5 + 'px' }}>
           게임시작
         </button>
