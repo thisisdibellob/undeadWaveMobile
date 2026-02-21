@@ -13,6 +13,7 @@ function GameScene() {
   const requestRef = useRef(null); // 애니메이션 프레임 취소용
 
   useEffect(() => {
+    
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
 
