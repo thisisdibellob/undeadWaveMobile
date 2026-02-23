@@ -32,7 +32,7 @@ function StartMenu({ onStart }) {
           Undead Wave
         </h2>
         
-        <button onClick={onStart} id="btn" style={{ marginTop: scrollValue * 1.5 + 'px' }}>
+        <button onClick={onStart} id="btn" style={{ marginTop: scrollValue * 1.5 + 'px', zIndex: 100}}>
           게임시작
         </button>
 

@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react';
 
 import { Player } from './logic/Player.js';
 import { World } from './logic/World.js';
-import { drawUI, drawGameOverScreen, drawUpgradeOptions, calculateUpgradeOptionBounds, statUI } from './logic/Ui.js';
+import { drawUI, drawGameOverScreen, drawUpgradeOptions, calculateUpgradeOptionBounds, statUI, drawMobileUI } from './logic/Ui.js';
 import { EnemyManager } from './logic/EnemyManager.js';
 import { WeaponManager } from './logic/WeaponManager.js';
 import { PartsManager } from './logic/PartsManager.js';
@@ -16,6 +16,139 @@ function GameScene() {
     
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
+
+    // 왼쪽 조이스틱 (이동) 
+    const joystick = {
+      active: false, touchId: null,
+      startX: 0, startY: 0, currX: 0, currY: 0,
+      radius: 50, handleRadius: 25
+    };
+
+    // 우측 조이스틱 (에임 및 사격)
+    const rightJoystick = {
+      active: false, touchId: null,
+      startX: 0, startY: 0, currX: 0, currY: 0,
+      radius: 50, handleRadius: 25
+    };
+
+    // 버튼 터치 거리 계산용 함수
+    const getDist = (x1, y1, x2, y2) => Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2);
+
+    // ------------ 터치 이벤트 핸들러 ------------
+    const handleTouchStart = (e) => {
+      if (e.cancelable) e.preventDefault();
+      
+      const w = window.innerWidth;
+      const h = window.innerHeight;
+
+      // 우측 하단 고정 조이스틱의 '중심점'
+      const rJoyX = w - 80;
+      const rJoyY = h - 80;
+      const rJoyRadius = 80; // 이 반경 안을 터치해야 오른쪽 조이스틱이 반응함
+
+      // 스킬 버튼들을 오른쪽 조이스틱 주변(부채꼴)으로 배치
+      // 버튼 배치 설정 (중심에서 130px 떨어진 궤도)
+      const dist = 130; 
+      const buttons = [
+        { id: 'roll',   x: rJoyX - dist, y: rJoyY + 30, r: 35 },                          // 9시 (180도)
+        { id: 'skillQ', x: rJoyX - dist * 0.866 + 10, y: rJoyY - dist * 0.5 +20, r: 35 },     // 10시 (150도)
+        { id: 'skillE', x: rJoyX - dist * 0.5 + 20, y: rJoyY - dist * 0.866 + 10, r: 35 },     // 11시 (120도)
+        { id: 'skillR', x: rJoyX + 30, y: rJoyY - dist, r: 35 }                           // 12시 (90도)
+      ];
+
+      for (let i = 0; i < e.changedTouches.length; i++) {
+        const touch = e.changedTouches[i];
+        let buttonTouched = false;
+
+        // 1. 스킬 버튼을 먼저 확인 (터치 영역을 살짝 더 크게 잡아줌 * 1.5)
+        for (const btn of buttons) {
+          if (getDist(touch.clientX, touch.clientY, btn.x, btn.y) < btn.r * 1.5) {
+            buttonTouched = true;
+            if (btn.id === 'roll') player.startRoll();
+            if (btn.id === 'skillQ') { if(player.startbackstep()) weaponManager.castCone(); }
+            if (btn.id === 'skillE') weaponManager.castRay(Date.now());
+            if (btn.id === 'skillR') weaponManager.castPullZone(Date.now());
+            break;
+          }
+        }
+        if (buttonTouched) continue; // 버튼을 눌렀으면 아래 조이스틱 로직은 무시
+
+        // 2. 우측 고정 조이스틱 (공격/조준) 처리
+        // 터치한 곳이 고정된 오른쪽 조이스틱 반경 안쪽이라면 활성화
+        if (getDist(touch.clientX, touch.clientY, rJoyX, rJoyY) < rJoyRadius && !rightJoystick.active) {
+          rightJoystick.active = true;
+          rightJoystick.touchId = touch.identifier;
+          rightJoystick.startX = rJoyX; // 시작점을 터치한 곳이 아니라 '고정된 중심점'으로 강제!
+          rightJoystick.startY = rJoyY;
+          rightJoystick.currX = touch.clientX;
+          rightJoystick.currY = touch.clientY;
+          continue;
+        }
+
+        // 3. 좌측 이동 조이스틱 (기존처럼 왼쪽 화면 아무 데나 누르면 생성되는 방식 유지)
+        if (touch.clientX < w / 2 && !joystick.active) {
+          joystick.active = true;
+          joystick.touchId = touch.identifier;
+          joystick.startX = touch.clientX; 
+          joystick.startY = touch.clientY;
+          joystick.currX = touch.clientX; 
+          joystick.currY = touch.clientY;
+        } 
+      }
+    };
+
+    const handleTouchMove = (e) => {
+      if (e.cancelable) e.preventDefault();
+      
+      for (let i = 0; i < e.changedTouches.length; i++) {
+        const touch = e.changedTouches[i];
+
+        // 이동 조이스틱 로직
+        if (joystick.active && touch.identifier === joystick.touchId) {
+          joystick.currX = touch.clientX; joystick.currY = touch.clientY;
+          const dx = joystick.currX - joystick.startX;
+          const dy = joystick.currY - joystick.startY;
+          const threshold = 15;
+          keys.w = dy < -threshold; keys.s = dy > threshold;
+          keys.a = dx < -threshold; keys.d = dx > threshold;
+        }
+        
+        // 조준 조이스틱 로직
+        if (rightJoystick.active && touch.identifier === rightJoystick.touchId) {
+          rightJoystick.currX = touch.clientX; rightJoystick.currY = touch.clientY;
+          
+          const dx = rightJoystick.currX - rightJoystick.startX;
+          const dy = rightJoystick.currY - rightJoystick.startY;
+          
+          // 조이스틱을 당긴 방향으로 가짜 마우스 좌표(mouseX, mouseY)를 생성하여 에임 조절
+          mouseX = (window.innerWidth / 2) + dx * 10;
+          mouseY = (window.innerHeight / 2) + dy * 10;
+        }
+      }
+    };
+
+    const handleTouchEnd = (e) => {
+      for (let i = 0; i < e.changedTouches.length; i++) {
+        const touch = e.changedTouches[i];
+
+        // 이동 종료
+        if (joystick.active && touch.identifier === joystick.touchId) {
+          joystick.active = false; joystick.touchId = null;
+          keys.w = keys.a = keys.s = keys.d = false;
+        }
+        // 사격 종료
+        if (rightJoystick.active && touch.identifier === rightJoystick.touchId) {
+          rightJoystick.active = false; rightJoystick.touchId = null;
+        }
+      }
+    };
+
+    
+
+    // ------------ 터치 이벤트 리스너 등록 ------------
+    canvas.addEventListener('touchstart', handleTouchStart, { passive: false });
+    canvas.addEventListener('touchmove', handleTouchMove, { passive: false });
+    canvas.addEventListener('touchend', handleTouchEnd);
 
     // ------------ 오디오 설정 ------------ 
     const audioPath = "/assets/resource/sound.mp3"; 
@@ -196,6 +329,7 @@ function GameScene() {
       weaponManager.time = timestamp;
       drawUI(ctx, player, weaponManager.shootMod, partsManager.num, weaponManager, timestamp);
       statUI(isSpace, ctx, player);
+      drawMobileUI(ctx, joystick, rightJoystick)
 
       requestRef.current = requestAnimationFrame(update);
     };
@@ -214,6 +348,9 @@ function GameScene() {
       cancelAnimationFrame(requestRef.current);
       gameBGM.pause(); // 화면 나가면 음악 끄기
       gameBGM.currentTime = 0;
+      canvas.removeEventListener('touchstart', handleTouchStart);
+      canvas.removeEventListener('touchmove', handleTouchMove);
+      canvas.removeEventListener('touchend', handleTouchEnd);
     };
   }, []); // 빈 배열: 처음 렌더링될 때 한 번만 실행
 

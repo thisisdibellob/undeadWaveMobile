@@ -272,8 +272,6 @@ export function drawUpgradeOptions(ctx, canvas, options) {
 
 export function statUI(isSpace, ctx, player) {
 
-    
-
     const barWidth = window.innerWidth * 1/3;
     const barHeight = window.innerHeight * 1/2;
     const barX = window.innerWidth/3;
@@ -301,7 +299,6 @@ export function statUI(isSpace, ctx, player) {
         ctx.fillStyle = 'rgba(0, 0, 0, 0.7)'; 
         ctx.fill();
 
-
         // 이미지 
         ctx.drawImage(imgHp, barX+180, barY+50, 55, 55); 
         ctx.drawImage(imgAtk, barX+175, barY+100, 65, 65); 
@@ -309,7 +306,6 @@ export function statUI(isSpace, ctx, player) {
         ctx.drawImage(imgLv, barX+182, barY+215, 50, 50);
         ctx.drawImage(imgExp, barX+182, barY+270, 50, 50);
         ctx.drawImage(imgSpeed, barX+170, barY+312, 65, 65); 
-
  
         // 텍스트
         ctx.fillStyle = 'white';
@@ -321,10 +317,81 @@ export function statUI(isSpace, ctx, player) {
         ctx.fillText(`Lv ${player.level}`, barX+250, barY+245);
         ctx.fillText(`${player.exp} / ${player.expToNextLevel}`, barX+250, barY+300);
         ctx.fillText(`${player.speed}`, barX+250, barY+353);
-
-
-        
     }
-    
-
 }
+
+export function drawMobileUI (ctx, joystick, rightJoystick) {
+    const w = window.innerWidth;
+    const h = window.innerHeight;
+
+    // 우측 고정 조이스틱 좌표
+    const rJoyX = w - 80;
+    const rJoyY = h - 80;
+
+    // 1. 왼쪽 동적 조이스틱 그리기 (누를 때만 보임)
+    if (joystick.active) {
+        ctx.beginPath();
+        ctx.arc(joystick.startX, joystick.startY, 50, 0, Math.PI * 2);
+        ctx.fillStyle = "rgba(255, 255, 255, 0.15)";
+        ctx.fill();
+        ctx.strokeStyle = "rgba(255, 255, 255, 0.4)";
+        ctx.stroke();
+
+        const dx = joystick.currX - joystick.startX;
+        const dy = joystick.currY - joystick.startY;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        const moveX = dist > 50 ? (dx / dist) * 50 : dx;
+        const moveY = dist > 50 ? (dy / dist) * 50 : dy;
+
+        ctx.beginPath();
+        ctx.arc(joystick.startX + moveX, joystick.startY + moveY, 25, 0, Math.PI * 2);
+        ctx.fillStyle = "rgba(255, 255, 255, 0.6)";
+        ctx.fill();
+    }
+
+    // 2. 오른쪽 고정 조이스틱 그리기 (항상 보임)
+    ctx.beginPath();
+    ctx.arc(rJoyX, rJoyY, 60, 0, Math.PI * 2);
+    ctx.fillStyle = "rgba(255, 100, 100, 0.15)"; // 공격 느낌이 나게 살짝 붉은 톤
+    ctx.fill();
+    ctx.strokeStyle = "rgba(255, 100, 100, 0.4)";
+    ctx.stroke();
+
+    // 오른쪽 조이스틱 손잡이 위치 계산 (안 누르고 있을 땐 정중앙)
+    let rMoveX = 0, rMoveY = 0;
+    if (rightJoystick.active) {
+        const dx = rightJoystick.currX - rJoyX;
+        const dy = rightJoystick.currY - rJoyY;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        rMoveX = dist > 60 ? (dx / dist) * 60 : dx;
+        rMoveY = dist > 60 ? (dy / dist) * 60 : dy;
+    }
+
+    ctx.beginPath();
+    ctx.arc(rJoyX + rMoveX, rJoyY + rMoveY, 30, 0, Math.PI * 2);
+    ctx.fillStyle = "rgba(255, 100, 100, 0.6)";
+    ctx.fill();
+
+    // 3. 부채꼴 스킬 버튼들 그리기
+    const drawButton = (x, y, r, text, color) => {
+        ctx.beginPath();
+        ctx.arc(x, y, r, 0, Math.PI * 2);
+        ctx.fillStyle = color;
+        ctx.fill();
+        ctx.strokeStyle = "rgba(255, 255, 255, 0.5)";
+        ctx.stroke();
+        
+        ctx.fillStyle = "white";
+        ctx.font = "14px Arial"; // 폰트 크기 약간 키움
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(text, x, y);
+    };
+
+    const dist = 130;
+    drawButton(rJoyX - dist, rJoyY + 30, 35, "구르기", "rgba(80, 80, 80, 0.5)");          // 9시
+    drawButton(rJoyX - dist * 0.866 + 10, rJoyY - dist * 0.5 + 20, 35, "Q", "rgba(255, 80, 80, 0.5)");   // 10시
+    drawButton(rJoyX - dist * 0.5 + 20, rJoyY - dist * 0.866 + 10, 35, "E", "rgba(80, 80, 255, 0.5)");   // 11시
+    drawButton(rJoyX + 30, rJoyY - dist, 35, "R", "rgba(80, 255, 80, 0.5)");
+    
+};
