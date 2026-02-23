@@ -1,8 +1,8 @@
 export class Parts {
     constructor(x, y) {
         // 크기
-        this.width = 30;
-        this.height = 30;
+        this.width = 15;
+        this.height = 15;
         this.color = 'green';
 
         // 스폰 위치

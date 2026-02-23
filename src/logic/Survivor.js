@@ -4,8 +4,8 @@ img.src =  "/assets/resource/resident.gif";
 export class Survivor {
     constructor(x, y) {
         // 크기
-        this.width = 40;
-        this.height = 60;
+        this.width = 20;
+        this.height = 30;
         this.color = 'green';
 
         // 스폰 위치
@@ -39,11 +39,11 @@ export class Survivor {
 
         //게이지 그리기
         ctx.fillStyle = 'blue';
-        ctx.fillRect(this.x, this.y-20, this.gazeRatio, 10);
+        ctx.fillRect(this.x, this.y-20, this.gazeRatio, 5);
 
         ctx.strokeStyle = 'black'; // 테두리
         ctx.lineWidth = 2;
-        ctx.strokeRect(this.x, this.y-20, this.width, 10);
+        ctx.strokeRect(this.x, this.y-20, this.width, 5);
         
 
         // 시민 이미지 그리기

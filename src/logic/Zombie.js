@@ -1,8 +1,8 @@
 export class Zombie {
     constructor(x, y, hpMultiplier = 1.0, speedMultiplier = 1.0, damageMultiplier = 1.0) {
         // 좀비 크기
-        this.width = 40;
-        this.height = 40;
+        this.width = 25;
+        this.height = 25;
         this.color = 'green';
 
         //좀비 이미지

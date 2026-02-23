@@ -3,8 +3,8 @@ export class Player{
     // 생성자
     constructor(worldWidth, worldHeight){ 
         // 플레이어 크기
-        this.width = 50; 
-        this.height = 50;
+        this.width = 25; 
+        this.height = 25;
         this.color = 'blue';
 
         // 플레이어 이미지
@@ -255,18 +255,15 @@ export class Player{
             
         // 캐릭터 이미지 그리기
         if (this.key == "d") ctx.drawImage(img, this.x, this.y-10, this.width+20, this.height+20);
-        else if (this.key == "a") ctx.drawImage(img, this.x-20, this.y-10, this.width+20, this.height+20);
+        else if (this.key == "a") ctx.drawImage(img, this.x-15, this.y-10, this.width+20, this.height+20);
         else ctx.drawImage(img, this.x, this.y-10, this.width+20, this.height+20);
-
-
-
 
         // 체력바 크기 설정
         const barWidth = this.width + 10;
         const barHeight = 6;
 
         //체력바 위치 설정
-        const hpBarX = this.x-5;
+        const hpBarX = this.x-2.5;
         const hpBarY = this.y+this.height+15;
 
         // 체력바 배경 그리기

@@ -15,8 +15,8 @@ export class BossZombie extends Zombie {
         // 보스 스탯으로 덮어쓰기
  
         // 외형
-        this.width = 100; 
-        this.height = 100;
+        this.width = 60; 
+        this.height = 60;
         this.color = 'purple'; 
 
         // 스탯

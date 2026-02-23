@@ -1,8 +1,8 @@
 export class Bullet {
     
     constructor(x,y,mouseX,mouseY,speed){
-        this.width = 20;
-        this.height = 20;
+        this.width = 10;
+        this.height = 10;
 
         this.x = x;
         this.y = y;
@@ -82,7 +82,7 @@ export class Bullet {
         }
 
         
-        ctx.drawImage(img, this.x, this.y, 25, 25);
+        ctx.drawImage(img, this.x, this.y, 15, 15);
     }
 
     static spawnBullet(mouseX, mouseY, x, y, bullets, speed) {

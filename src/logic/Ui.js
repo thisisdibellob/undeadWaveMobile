@@ -33,18 +33,6 @@ partsImg.src =  "/assets/resource/weapon_image/parts.png";
 
 export function drawUI(ctx, player, shootMod, partsNum, weaponManager, timestamp) {
 
-    // // --- 1. HP 및 방어력 텍스트 ---
-    // ctx.fillStyle = 'white';
-    // ctx.font = '20px Arial';
-    // ctx.textAlign = 'left';
-
-    // let hpText = `HP: ${player.hp} / ${player.maxHp}`;
-    // if (player.defense >= 1) { // 방어력이 1 이상일 때만 표시
-    //     hpText += ` | DEF: ${player.defense}`;
-    // }
-
-    // ctx.fillText(hpText, 10, 30);
-
     // --- 2. 경험치 바 ---
     const barWidth = window.innerWidth-2;
     const barHeight = 20;
@@ -63,56 +51,51 @@ export function drawUI(ctx, player, shootMod, partsNum, weaponManager, timestamp
     // --- 3. 레벨 및 경험치 텍스트 ---
     ctx.fillStyle = 'white';
     ctx.textAlign = 'left';
-    ctx.font = 'bold 16px Arial';
-    ctx.fillText(`LV ${player.level}`, window.innerWidth-60, 17);
-    // ctx.fillText(
-    //     `Lv. ${player.level} - EXP: ${player.exp} / ${player.expToNextLevel}`, 
-    //     barX + barWidth + 10, barY + 15
-    // );
+    ctx.font = 'bold 13px Arial';
+    ctx.fillText(`LV ${player.level}`, window.innerWidth-40, 11);
 
     // --- 4. 무기 선택창 ---
     let weaponX = 10;
     let weaponY = 30;
-    let weaponWidth = 70;
-    let weaponHeight = 100;
+    let weaponWidth = 52.5;
+    let weaponHeight = 75;
     ctx.lineWidth = 2;
 
-    // (이미지 로드는 비효율적이므로, 실제로는 이미지 객체를 미리 로드해두는 것이 좋음)
-
     // - 권총
-    drawWeaponSlot(ctx, weaponX, weaponY, weaponWidth, weaponHeight, "권총", pistolImg, shootMod === "pistol", {x:10, y:10, w:50, h:50});
+    drawWeaponSlot(ctx, weaponX, weaponY, weaponWidth, weaponHeight, "권총", pistolImg, shootMod === "pistol", {x:10, y:10, w:35, h:35});
     
     // - 샷건
     weaponX += weaponWidth + 10;
     if (partsNum>=20)
-        drawWeaponSlot(ctx, weaponX, weaponY, weaponWidth, weaponHeight, "샷건", shotgunImg, shootMod === "shotgun", {x:10, y:0, w:50, h:80});
+        drawWeaponSlot(ctx, weaponX, weaponY, weaponWidth, weaponHeight, "샷건", shotgunImg, shootMod === "shotgun", {x:10, y:0, w:35, h:60});
     else
-        drawWeaponSlot(ctx, weaponX, weaponY, weaponWidth, weaponHeight, "20X", partsImg, shootMod === "shotgun", {x:5, y:0, w:60, h:80});
+        drawWeaponSlot(ctx, weaponX, weaponY, weaponWidth, weaponHeight, "20X", partsImg, shootMod === "shotgun", {x:5, y:0, w:45, h:60});
 
     // - 라이플
     weaponX += weaponWidth + 10;
     if (partsNum>=50)
-        drawWeaponSlot(ctx, weaponX, weaponY, weaponWidth, weaponHeight, "라이플", rifleImg, shootMod === "rifle", {x:10, y:-10, w:50, h:100});
+        drawWeaponSlot(ctx, weaponX, weaponY, weaponWidth, weaponHeight, "라이플", rifleImg, shootMod === "rifle", {x:10, y:-10, w:35, h:75});
     else
-        drawWeaponSlot(ctx, weaponX, weaponY, weaponWidth, weaponHeight, "50X", partsImg, shootMod === "rifle", {x:5, y:0, w:60, h:80});
+        drawWeaponSlot(ctx, weaponX, weaponY, weaponWidth, weaponHeight, "50X", partsImg, shootMod === "rifle", {x:5, y:0, w:45, h:60});
 
     // - 폭탄
     weaponX += weaponWidth + 10;
     if (partsNum>=100)
-        drawWeaponSlot(ctx, weaponX, weaponY, weaponWidth, weaponHeight, "폭탄", boomImg, shootMod === "bomb", {x:10, y:10, w:50, h:50});
+        drawWeaponSlot(ctx, weaponX, weaponY, weaponWidth, weaponHeight, "폭탄", boomImg, shootMod === "bomb", {x:10, y:10, w:35, h:35});
     else 
-        drawWeaponSlot(ctx, weaponX, weaponY, weaponWidth, weaponHeight, "100X", partsImg, shootMod === "bomb", {x:5, y:0, w:60, h:80});
+        drawWeaponSlot(ctx, weaponX, weaponY, weaponWidth, weaponHeight, "100X", partsImg, shootMod === "bomb", {x:5, y:0, w:45, h:60});
     
 
 
     // --- 5. 부품 정보 ---
     ctx.fillStyle = 'black';
     ctx.textAlign = 'left';
-    ctx.font = 'bold 20px Arial';
-    ctx.fillText(`: ${partsNum}`, 410, 66);
+    ctx.font = 'bold 15px Arial';
+    ctx.fillText(`: ${partsNum}`, weaponX+weaponWidth+50, 45);
+    ctx.drawImage(partsImg, weaponX+weaponWidth+10, 25, 40, 40);
 
-    ctx.drawImage(partsImg, 350, 30, 60, 60);
 
+    /* 모바일 버젼은 이거 삭제 
 
     // 스킬 쿨타임
     let skillX = window.innerWidth-80;
@@ -158,6 +141,7 @@ export function drawUI(ctx, player, shootMod, partsNum, weaponManager, timestamp
     ctx.fillStyle = 'rgba(30, 30, 30, 0.5)';
     ctx.fillRect(skillX, skillY, skillWidth, skillHeight * player.rollCooldownTimer / player.rollCooldown);
     ctx.drawImage(keyShift, skillX+10, skillY+20, 50, 50);
+    */
 
     // ctx.font = 'bold 20px Arial';
     // ctx.fillStyle = 'black';
@@ -173,8 +157,8 @@ function drawWeaponSlot(ctx, x, y, w, h, name, weaponImg, isSelected, imgParams)
 
     ctx.fillStyle = isSelected ? 'white' : 'rgba(200, 200, 200, 1)';
     ctx.textAlign = 'center';
-    ctx.font = '16px Arial';
-    ctx.fillText(name, x + w / 2, y + 90);
+    ctx.font = '10px Arial';
+    ctx.fillText(name, x + w / 2, y + 60);
 
     // 선택된 무기일 경우 테두리 표시
     ctx.strokeStyle = isSelected ? 'white' : 'transparent';
@@ -320,12 +304,26 @@ export function statUI(isSpace, ctx, player) {
     }
 }
 
-export function drawMobileUI (ctx, joystick, rightJoystick) {
+export function drawMobileUI (ctx, joystick, rightJoystick, player, weaponManager) {
     const w = window.innerWidth;
     const h = window.innerHeight;
 
+    // --- 쿨타임 계산 로직 ---
+    // R (Pull Zone)
+    let tornadoRatio = (weaponManager.PULLZONE_COOLDOWN - (weaponManager.time - weaponManager.lastPullZoneTime)) / weaponManager.PULLZONE_COOLDOWN;
+    tornadoRatio = Math.max(0, Math.min(1, tornadoRatio));
+    // Q (Backstep)
+    let qRatio = player.backstepCooldownTimer / player.backstepCooldown;
+    qRatio = Math.max(0, Math.min(1, qRatio));
+    // E (Ray)
+    let rayRatio = (weaponManager.RAY_COOLDOWN - (weaponManager.time - weaponManager.lastRayTime)) / weaponManager.RAY_COOLDOWN;
+    rayRatio = Math.max(0, Math.min(1, rayRatio));
+    // Shift (Roll)
+    let rollRatio = player.rollCooldownTimer / player.rollCooldown;
+    rollRatio = Math.max(0, Math.min(1, rollRatio));
+
     // 우측 고정 조이스틱 좌표
-    const rJoyX = w - 80;
+    const rJoyX = w - 120;
     const rJoyY = h - 80;
 
     // 1. 왼쪽 동적 조이스틱 그리기 (누를 때만 보임)
@@ -352,9 +350,9 @@ export function drawMobileUI (ctx, joystick, rightJoystick) {
     // 2. 오른쪽 고정 조이스틱 그리기 (항상 보임)
     ctx.beginPath();
     ctx.arc(rJoyX, rJoyY, 60, 0, Math.PI * 2);
-    ctx.fillStyle = "rgba(255, 100, 100, 0.15)"; // 공격 느낌이 나게 살짝 붉은 톤
+    ctx.fillStyle = "rgba(255, 255, 255, 0.15)"; // 공격 느낌이 나게 살짝 붉은 톤
     ctx.fill();
-    ctx.strokeStyle = "rgba(255, 100, 100, 0.4)";
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.4)";
     ctx.stroke();
 
     // 오른쪽 조이스틱 손잡이 위치 계산 (안 누르고 있을 땐 정중앙)
@@ -369,29 +367,45 @@ export function drawMobileUI (ctx, joystick, rightJoystick) {
 
     ctx.beginPath();
     ctx.arc(rJoyX + rMoveX, rJoyY + rMoveY, 30, 0, Math.PI * 2);
-    ctx.fillStyle = "rgba(255, 100, 100, 0.6)";
+    ctx.fillStyle = "rgba(255, 255, 255, 0.6)";
     ctx.fill();
 
     // 3. 부채꼴 스킬 버튼들 그리기
-    const drawButton = (x, y, r, text, color) => {
+    const drawButton = (x, y, r, text, color, ratio, unlocked = true) => {
+        // 1. 기본 버튼 배경
         ctx.beginPath();
         ctx.arc(x, y, r, 0, Math.PI * 2);
-        ctx.fillStyle = color;
+        ctx.fillStyle = unlocked ? color : 'rgba(30, 30, 30, 1)'; // 미해금 시 어둡게
         ctx.fill();
         ctx.strokeStyle = "rgba(255, 255, 255, 0.5)";
+        ctx.lineWidth = 2;
         ctx.stroke();
-        
+
+        // 2. 쿨타임 오버레이 (남은 시간에 비례해서 부채꼴로 그리기)
+        if (ratio > 0) {
+            ctx.beginPath();
+            ctx.moveTo(x, y);
+            // -Math.PI/2는 12시 방향부터 시작하게 함
+            ctx.arc(x, y, r, -Math.PI / 2, (-Math.PI / 2) + (Math.PI * 2 * ratio));
+            ctx.lineTo(x, y);
+            ctx.fillStyle = "rgba(0, 0, 0, 0.5)"; // 쿨타임 그림자
+            ctx.fill();
+        }
+
+        // 3. 텍스트 표시
         ctx.fillStyle = "white";
-        ctx.font = "14px Arial"; // 폰트 크기 약간 키움
+        ctx.font = "bold 14px Arial";
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
         ctx.fillText(text, x, y);
     };
 
+    
+
     const dist = 130;
-    drawButton(rJoyX - dist, rJoyY + 30, 35, "구르기", "rgba(80, 80, 80, 0.5)");          // 9시
-    drawButton(rJoyX - dist * 0.866 + 10, rJoyY - dist * 0.5 + 20, 35, "Q", "rgba(255, 80, 80, 0.5)");   // 10시
-    drawButton(rJoyX - dist * 0.5 + 20, rJoyY - dist * 0.866 + 10, 35, "E", "rgba(80, 80, 255, 0.5)");   // 11시
-    drawButton(rJoyX + 30, rJoyY - dist, 35, "R", "rgba(80, 255, 80, 0.5)");
+    drawButton(rJoyX - dist, rJoyY + 30, 35, "Shift", "rgba(80, 80, 80, 0.5)", rollRatio);          // 9시
+    drawButton(rJoyX - dist * 0.866 + 10, rJoyY - dist * 0.5 + 20, 35, "Q", "rgba(80, 80, 80, 0.5)", qRatio);   // 10시
+    drawButton(rJoyX - dist * 0.5 + 20, rJoyY - dist * 0.866 + 10, 35, "E", "rgba(80, 80, 80, 0.5)", rayRatio);   // 11시
+    drawButton(rJoyX + 30, rJoyY - dist, 35, "R", "rgba(80, 80, 80, 0.5)", tornadoRatio);
     
 };

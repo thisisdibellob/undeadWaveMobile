@@ -42,7 +42,7 @@ function GameScene() {
       const h = window.innerHeight;
 
       // 우측 하단 고정 조이스틱의 '중심점'
-      const rJoyX = w - 80;
+      const rJoyX = w - 120;
       const rJoyY = h - 80;
       const rJoyRadius = 80; // 이 반경 안을 터치해야 오른쪽 조이스틱이 반응함
 
@@ -329,7 +329,7 @@ function GameScene() {
       weaponManager.time = timestamp;
       drawUI(ctx, player, weaponManager.shootMod, partsManager.num, weaponManager, timestamp);
       statUI(isSpace, ctx, player);
-      drawMobileUI(ctx, joystick, rightJoystick)
+      drawMobileUI(ctx, joystick, rightJoystick, player, weaponManager)
 
       requestRef.current = requestAnimationFrame(update);
     };
