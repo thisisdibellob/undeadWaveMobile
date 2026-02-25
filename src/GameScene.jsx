@@ -2,13 +2,13 @@ import { useEffect, useRef } from 'react';
 
 import { Player } from './logic/Player.js';
 import { World } from './logic/World.js';
-import { drawUI, drawGameOverScreen, drawUpgradeOptions, calculateUpgradeOptionBounds, statUI, drawMobileUI } from './logic/Ui.js';
+import { drawUI, drawGameOverScreen, drawUpgradeOptions, calculateUpgradeOptionBounds, statUI, drawMobileUI, getRestartButtonBounds } from './logic/Ui.js';
 import { EnemyManager } from './logic/EnemyManager.js';
 import { WeaponManager } from './logic/WeaponManager.js';
 import { PartsManager } from './logic/PartsManager.js';
 import { SurvivorManager } from './logic/SurvivorManager.js';
 
-function GameScene() {
+function GameScene({ bgmRef }) {
   const canvasRef = useRef(null);
   const requestRef = useRef(null); // 애니메이션 프레임 취소용
 
@@ -16,6 +16,8 @@ function GameScene() {
     
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
+    let viewportWidth = 0;
+    let viewportHeight = 0;
 
     // 왼쪽 조이스틱 (이동) 
     const joystick = {
@@ -37,6 +39,26 @@ function GameScene() {
     // ------------ 터치 이벤트 핸들러 ------------
     const handleTouchStart = (e) => {
       if (e.cancelable) e.preventDefault();
+
+      if (currentState === GAME_STATE.GAMEOVER) {
+        for (let i = 0; i < e.changedTouches.length; i++) {
+          const touch = e.changedTouches[i];
+          if (tryRestartFromGameOver(touch.clientX, touch.clientY)) {
+            break;
+          }
+        }
+        return;
+      }
+
+      if (currentState === GAME_STATE.UPGRADING) {
+        for (let i = 0; i < e.changedTouches.length; i++) {
+          const touch = e.changedTouches[i];
+          if (beginUpgradePress(touch)) {
+            break;
+          }
+        }
+        return;
+      }
       
       const w = window.innerWidth;
       const h = window.innerHeight;
@@ -59,6 +81,10 @@ function GameScene() {
       for (let i = 0; i < e.changedTouches.length; i++) {
         const touch = e.changedTouches[i];
         let buttonTouched = false;
+
+        if (trySelectWeaponSlot(touch.clientX, touch.clientY)) {
+          continue;
+        }
 
         // 1. 스킬 버튼을 먼저 확인 (터치 영역을 살짝 더 크게 잡아줌 * 1.5)
         for (const btn of buttons) {
@@ -99,6 +125,13 @@ function GameScene() {
 
     const handleTouchMove = (e) => {
       if (e.cancelable) e.preventDefault();
+
+      if (currentState === GAME_STATE.UPGRADING) {
+        for (let i = 0; i < e.changedTouches.length; i++) {
+          updateUpgradePress(e.changedTouches[i]);
+        }
+        return;
+      }
       
       for (let i = 0; i < e.changedTouches.length; i++) {
         const touch = e.changedTouches[i];
@@ -128,6 +161,13 @@ function GameScene() {
     };
 
     const handleTouchEnd = (e) => {
+      if (currentState === GAME_STATE.UPGRADING) {
+        for (let i = 0; i < e.changedTouches.length; i++) {
+          finalizeUpgradePress(e.changedTouches[i]);
+        }
+        return;
+      }
+
       for (let i = 0; i < e.changedTouches.length; i++) {
         const touch = e.changedTouches[i];
 
@@ -143,38 +183,201 @@ function GameScene() {
       }
     };
 
+    const handleTouchCancel = (e) => {
+      if (currentState === GAME_STATE.UPGRADING) {
+        for (let i = 0; i < e.changedTouches.length; i++) {
+          if (e.changedTouches[i].identifier === upgradePressTouchId) {
+            clearUpgradePress();
+            break;
+          }
+        }
+      }
+    };
+
     
 
     // ------------ 터치 이벤트 리스너 등록 ------------
     canvas.addEventListener('touchstart', handleTouchStart, { passive: false });
     canvas.addEventListener('touchmove', handleTouchMove, { passive: false });
     canvas.addEventListener('touchend', handleTouchEnd);
+    canvas.addEventListener('touchcancel', handleTouchCancel);
 
-    // ------------ 오디오 설정 ------------ 
-    const audioPath = "/assets/resource/sound.mp3"; 
-    const gameBGM = new Audio(audioPath);
-    gameBGM.loop = true;
-
-    function playBGM() {
-      gameBGM.play().catch(error => console.error("자동 재생 차단됨.", error));
+    // ------------ 오디오 설정 ------------
+    const gameBGM = bgmRef?.current;
+    if (gameBGM) {
+      gameBGM.play().catch(() => {});
     }
 
-    const bgmHandler = () => {
-      playBGM();
-      document.removeEventListener('keydown', bgmHandler);
+    const resumeBgmOnFirstInput = () => {
+      if (gameBGM && gameBGM.paused) {
+        gameBGM.play().catch(() => {});
+      }
+      window.removeEventListener('pointerdown', resumeBgmOnFirstInput);
+      window.removeEventListener('touchstart', resumeBgmOnFirstInput);
+      window.removeEventListener('keydown', resumeBgmOnFirstInput);
     };
-    document.addEventListener('keydown', bgmHandler, { once: true });
+    window.addEventListener('pointerdown', resumeBgmOnFirstInput, { once: true });
+    window.addEventListener('touchstart', resumeBgmOnFirstInput, { once: true });
+    window.addEventListener('keydown', resumeBgmOnFirstInput, { once: true });
 
     // ------------ 게임 상태 및 변수 ------------
     let lastFrameTime = 0;
     const GAME_STATE = { PLAYING: 'playing', UPGRADING: 'upgrading', GAMEOVER: 'gameover' };
     let currentState = GAME_STATE.PLAYING;
     let currentUpgradeOptions = [];
+    let upgradePressedIndex = -1;
+    let upgradePressTouchId = null;
+    let upgradePressOutsideAt = 0;
+    const UPGRADE_PRESS_CANCEL_DELAY = 180;
+
+    const trySelectUpgradeOption = (x, y) => {
+      if (currentState !== GAME_STATE.UPGRADING) return false;
+
+      for (const option of currentUpgradeOptions) {
+        if (!option.bounds) continue;
+        const bounds = option.bounds;
+        if (x >= bounds.x && x <= bounds.x + bounds.width &&
+            y >= bounds.y && y <= bounds.y + bounds.height) {
+          player.applyUpgrade(option);
+          currentState = GAME_STATE.PLAYING;
+          currentUpgradeOptions = [];
+          return true;
+        }
+      }
+      return false;
+    };
+
+    // 좌표가 어떤 업그레이드 카드 위인지 찾는다.
+    const getUpgradeIndexAt = (x, y) => {
+      for (let i = 0; i < currentUpgradeOptions.length; i++) {
+        const option = currentUpgradeOptions[i];
+        if (!option.bounds) continue;
+        const b = option.bounds;
+        if (x >= b.x && x <= b.x + b.width && y >= b.y && y <= b.y + b.height) {
+          return i;
+        }
+      }
+      return -1;
+    };
+
+    const clearUpgradePress = () => {
+      upgradePressedIndex = -1;
+      upgradePressTouchId = null;
+      upgradePressOutsideAt = 0;
+    };
+
+    // 터치 시작 시 눌림 상태만 만들고, 실제 선택은 touchend에서 확정한다.
+    const beginUpgradePress = (touch) => {
+      if (upgradePressTouchId !== null && touch.identifier !== upgradePressTouchId) {
+        return false;
+      }
+
+      const index = getUpgradeIndexAt(touch.clientX, touch.clientY);
+      if (index === -1) return false;
+      upgradePressedIndex = index;
+      upgradePressTouchId = touch.identifier;
+      upgradePressOutsideAt = 0;
+      return true;
+    };
+
+    // 버튼 밖으로 이동한 시간이 일정 기준을 넘으면 눌림 상태를 해제한다.
+    const updateUpgradePress = (touch) => {
+      if (touch.identifier !== upgradePressTouchId || upgradePressedIndex === -1) return;
+
+      const option = currentUpgradeOptions[upgradePressedIndex];
+      if (!option?.bounds) {
+        clearUpgradePress();
+        return;
+      }
+
+      const b = option.bounds;
+      const isInside = touch.clientX >= b.x && touch.clientX <= b.x + b.width &&
+        touch.clientY >= b.y && touch.clientY <= b.y + b.height;
+
+      if (isInside) {
+        upgradePressOutsideAt = 0;
+        return;
+      }
+
+      if (upgradePressOutsideAt === 0) {
+        upgradePressOutsideAt = Date.now();
+        return;
+      }
+
+      if (Date.now() - upgradePressOutsideAt >= UPGRADE_PRESS_CANCEL_DELAY) {
+        clearUpgradePress();
+      }
+    };
+
+    const finalizeUpgradePress = (touch) => {
+      if (touch.identifier !== upgradePressTouchId || upgradePressedIndex === -1) return;
+
+      const option = currentUpgradeOptions[upgradePressedIndex];
+      const b = option?.bounds;
+      const isInside = b &&
+        touch.clientX >= b.x && touch.clientX <= b.x + b.width &&
+        touch.clientY >= b.y && touch.clientY <= b.y + b.height;
+
+      if (isInside && upgradePressOutsideAt === 0 && option) {
+        player.applyUpgrade(option);
+        currentState = GAME_STATE.PLAYING;
+        currentUpgradeOptions = [];
+      }
+      clearUpgradePress();
+    };
+
+    // 게임 오버 버튼 클릭/터치 시 새로고침으로 게임을 즉시 재시작한다.
+    const tryRestartFromGameOver = (x, y) => {
+      if (currentState !== GAME_STATE.GAMEOVER) return false;
+
+      const button = getRestartButtonBounds({ width: viewportWidth, height: viewportHeight });
+      const isInside = x >= button.x && x <= button.x + button.width &&
+        y >= button.y && y <= button.y + button.height;
+
+      if (isInside) {
+        window.location.reload();
+        return true;
+      }
+      return false;
+    };
+
+    const trySelectWeaponSlot = (x, y) => {
+      if (currentState !== GAME_STATE.PLAYING) return false;
+
+      const baseX = 10;
+      const baseY = 30;
+      const slotWidth = 52.5;
+      const slotHeight = 75;
+      const slotGap = 10;
+      const slotCount = 4;
+
+      if (y < baseY || y > baseY + slotHeight) return false;
+
+      for (let i = 0; i < slotCount; i++) {
+        const slotX = baseX + i * (slotWidth + slotGap);
+        if (x < slotX || x > slotX + slotWidth) continue;
+
+        if (i === 0) weaponManager.setWeapon('pistol');
+        if (i === 1 && partsManager.num >= 20) weaponManager.setWeapon('shotgun');
+        if (i === 2 && partsManager.num >= 50) weaponManager.setWeapon('rifle');
+        if (i === 3 && partsManager.num >= 100) weaponManager.setWeapon('bomb');
+        return true;
+      }
+
+      return false;
+    };
 
     // ------------ 캔버스 크기 ------------
     const resizeCanvas = () => {
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
+      const dpr = Math.max(window.devicePixelRatio || 1, 1);
+      viewportWidth = window.innerWidth;
+      viewportHeight = window.innerHeight;
+
+      canvas.style.width = `${viewportWidth}px`;
+      canvas.style.height = `${viewportHeight}px`;
+      canvas.width = Math.floor(viewportWidth * dpr);
+      canvas.height = Math.floor(viewportHeight * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     };
     resizeCanvas();
     window.addEventListener('resize', resizeCanvas);
@@ -229,19 +432,12 @@ function GameScene() {
     };
 
     const handleClick = (event) => {
-      if (currentState === GAME_STATE.UPGRADING) {
-        for (const option of currentUpgradeOptions) {
-          if (!option.bounds) continue;
-          const bounds = option.bounds;
-          if (event.clientX >= bounds.x && event.clientX <= bounds.x + bounds.width &&
-              event.clientY >= bounds.y && event.clientY <= bounds.y + bounds.height) {
-            player.applyUpgrade(option); 
-            currentState = GAME_STATE.PLAYING;
-            currentUpgradeOptions = [];
-            break; 
-          }
-        }
+      if (tryRestartFromGameOver(event.clientX, event.clientY)) return;
+      if (trySelectUpgradeOption(event.clientX, event.clientY)) {
+        clearUpgradePress();
+        return;
       }
+      trySelectWeaponSlot(event.clientX, event.clientY);
     };
 
     const handleMouseMove = (event) => {
@@ -255,11 +451,11 @@ function GameScene() {
     document.addEventListener('mousemove', handleMouseMove);
 
     // ------------ 헬퍼 함수 ------------
-    const clearCanvas = () => ctx.clearRect(0, 0, canvas.width, canvas.height);
+    const clearCanvas = () => ctx.clearRect(0, 0, viewportWidth, viewportHeight);
 
     const drawPausedGame = () => {
-      let cameraX = Math.max(Math.min(-player.x + canvas.width / 2, 0), canvas.width - world.width);
-      let cameraY = Math.max(Math.min(-player.y + canvas.height / 2, 0), canvas.height - world.height);
+      let cameraX = Math.max(Math.min(-player.x + viewportWidth / 2, 0), viewportWidth - world.width);
+      let cameraY = Math.max(Math.min(-player.y + viewportHeight / 2, 0), viewportHeight - world.height);
       ctx.save();
       ctx.translate(cameraX, cameraY);
       world.draw(ctx);
@@ -276,7 +472,7 @@ function GameScene() {
       lastFrameTime = timestamp;
 
       if (currentState === GAME_STATE.GAMEOVER) {
-        drawGameOverScreen(ctx, canvas, player.score);
+        drawGameOverScreen(ctx, { width: viewportWidth, height: viewportHeight }, player.score);
         return;
       }
 
@@ -284,7 +480,12 @@ function GameScene() {
         clearCanvas();
         drawPausedGame(); 
         drawUI(ctx, player, weaponManager.shootMod, partsManager.num, weaponManager, timestamp); 
-        drawUpgradeOptions(ctx, canvas, currentUpgradeOptions); 
+        drawUpgradeOptions(
+          ctx,
+          { width: viewportWidth, height: viewportHeight },
+          currentUpgradeOptions,
+          upgradePressedIndex
+        ); 
         requestRef.current = requestAnimationFrame(update); 
         return; 
       }
@@ -306,11 +507,12 @@ function GameScene() {
       if (collisionResults.didLevelUp) {
         currentState = GAME_STATE.UPGRADING;
         currentUpgradeOptions = player.getUpgradeOptions(3);
-        calculateUpgradeOptionBounds(canvas, currentUpgradeOptions);
+        calculateUpgradeOptionBounds({ width: viewportWidth, height: viewportHeight }, currentUpgradeOptions);
+        clearUpgradePress();
       }
 
-      let cameraX = Math.max(Math.min(-player.x + canvas.width / 2, 0), canvas.width - world.width);
-      let cameraY = Math.max(Math.min(-player.y + canvas.height / 2, 0), canvas.height - world.height);
+      let cameraX = Math.max(Math.min(-player.x + viewportWidth / 2, 0), viewportWidth - world.width);
+      let cameraY = Math.max(Math.min(-player.y + viewportHeight / 2, 0), viewportHeight - world.height);
 
       ctx.save();
       ctx.translate(cameraX, cameraY);
@@ -340,17 +542,22 @@ function GameScene() {
     // ------------ 컴포넌트 언마운트 시 뒷정리 (매우 중요) ------------
     return () => {
       window.removeEventListener('resize', resizeCanvas);
-      document.removeEventListener('keydown', bgmHandler);
       document.removeEventListener('keydown', handleKeyDown);
       document.removeEventListener('keyup', handleKeyUp);
       document.removeEventListener('click', handleClick);
       document.removeEventListener('mousemove', handleMouseMove);
       cancelAnimationFrame(requestRef.current);
-      gameBGM.pause(); // 화면 나가면 음악 끄기
-      gameBGM.currentTime = 0;
+      if (gameBGM) {
+        gameBGM.pause(); // 화면 나가면 음악 끄기
+        gameBGM.currentTime = 0;
+      }
+      window.removeEventListener('pointerdown', resumeBgmOnFirstInput);
+      window.removeEventListener('touchstart', resumeBgmOnFirstInput);
+      window.removeEventListener('keydown', resumeBgmOnFirstInput);
       canvas.removeEventListener('touchstart', handleTouchStart);
       canvas.removeEventListener('touchmove', handleTouchMove);
       canvas.removeEventListener('touchend', handleTouchEnd);
+      canvas.removeEventListener('touchcancel', handleTouchCancel);
     };
   }, []); // 빈 배열: 처음 렌더링될 때 한 번만 실행
 

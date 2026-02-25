@@ -182,11 +182,31 @@ export function drawGameOverScreen(ctx, canvas, score) {
     ctx.fillStyle = 'white';
     ctx.font = '50px Arial';
     ctx.textAlign = 'center';
-    ctx.fillText('GAME OVER', canvas.width / 2, canvas.height / 2);
+    ctx.fillText('GAME OVER', canvas.width / 2, canvas.height / 2 -60);
     ctx.font = '30px Arial';
-    ctx.fillText(`Score: ${score}`, canvas.width / 2, canvas.height / 2 + 60);
-    ctx.font = '20px Arial';
-    ctx.fillText('Press F5 to Restart', canvas.width / 2, canvas.height / 2 + 100);
+    ctx.fillText(`Score: ${score}`, canvas.width / 2, canvas.height / 2);
+
+    // 게임 오버 시 재시작 버튼 렌더링
+    const button = getRestartButtonBounds(canvas);
+    ctx.fillStyle = '#f4d03f';
+    ctx.fillRect(button.x, button.y, button.width, button.height);
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 3;
+    ctx.strokeRect(button.x, button.y, button.width, button.height);
+    ctx.fillStyle = '#1c1c1c';
+    ctx.font = 'bold 24px Arial';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('재시작', canvas.width / 2, button.y + button.height / 2);
+    ctx.textBaseline = 'alphabetic';
+}
+
+// 게임 오버 버튼의 클릭/터치 판정용 영역을 반환한다.
+export function getRestartButtonBounds(canvas) {
+    const width = 220;
+    const height = 56;
+    const x = canvas.width / 2 - width / 2;
+    const y = canvas.height / 2 + 35;
+    return { x, y, width, height };
 }
 
 /**
@@ -196,16 +216,13 @@ export function drawGameOverScreen(ctx, canvas, score) {
  * @param {Array<object>} options - 업그레이드 선택지 배열
  */
 export function calculateUpgradeOptionBounds(canvas, options) {
-    const boxWidth = 250;
-    const boxHeight = 350;
-    const padding = 30;
-    const totalWidth = boxWidth * 3 + padding * 2; // 박스 3개 + 패딩 2개
-    let startX = canvas.width / 2 - totalWidth / 2; // 중앙 정렬 시작 X좌표
-    const startY = canvas.height / 2 - boxHeight / 2; // 중앙 정렬 시작 Y좌표
+    const { boxWidth, boxHeight, padding, columns, startX, startY } = getUpgradeLayout(canvas, options.length);
 
     for (let i = 0; i < options.length; i++) {
-        const x = startX + i * (boxWidth + padding);
-        const y = startY;
+        const col = i % columns;
+        const row = Math.floor(i / columns);
+        const x = startX + col * (boxWidth + padding);
+        const y = startY + row * (boxHeight + padding);
         // 'bounds' 속성에 계산된 좌표와 크기를 저장
         options[i].bounds = { x: x, y: y, width: boxWidth, height: boxHeight };
     }
@@ -217,37 +234,114 @@ export function calculateUpgradeOptionBounds(canvas, options) {
  * @param {HTMLCanvasElement} canvas - 캔버스 (중앙 정렬용)
  * @param {Array<object>} options - 표시할 업그레이드 선택지 객체 배열
  */
-export function drawUpgradeOptions(ctx, canvas, options) {
+export function drawUpgradeOptions(ctx, canvas, options, pressedIndex = -1) {
+    const layout = getUpgradeLayout(canvas, options.length);
+    const isNarrow = canvas.width < 760;
+    const titleSize = Math.max(26, Math.min(40, canvas.width * 0.065));
+    const nameSize = Math.max(18, Math.min(24, canvas.width * 0.04));
+    const descSize = Math.max(14, Math.min(18, canvas.width * 0.032));
+
     ctx.fillStyle = 'rgba(0, 0, 0, 0.8)'; // 반투명 검은색 배경
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     ctx.textAlign = 'center';
     ctx.fillStyle = 'yellow';
-    ctx.font = '40px Arial';
-    ctx.fillText('스킬 선택', canvas.width / 2, canvas.height / 2 - 200);
+    ctx.textBaseline = 'middle';
+    ctx.font = `bold ${titleSize}px Arial`;
+    const titleY = Math.max(titleSize + 24, layout.startY - 30);
+    ctx.fillText('스킬 선택', canvas.width / 2, titleY);
 
     // 각 선택지 박스를 순회하며 그립니다.
-    for (const option of options) {
+    for (let i = 0; i < options.length; i++) {
+        const option = options[i];
         if (!option.bounds) continue; // 좌표가 계산되지 않았으면 건너뜀
         
         const { x, y, width, height } = option.bounds;
+        const isPressed = i === pressedIndex;
+        const drawY = isPressed ? y + 3 : y;
 
         // 1. 박스 배경 및 테두리
-        ctx.fillStyle = '#34495e';
-        ctx.fillRect(x, y, width, height);
-        ctx.strokeStyle = 'gold';
+        ctx.fillStyle = isPressed ? '#2f4255' : '#34495e';
+        ctx.fillRect(x, drawY, width, height);
+        ctx.strokeStyle = isPressed ? '#f7dc6f' : 'gold';
         ctx.lineWidth = 5;
-        ctx.strokeRect(x, y, width, height);
+        ctx.strokeRect(x, drawY, width, height);
 
         // 2. 업그레이드 이름 (제목)
         ctx.fillStyle = 'white';
-        ctx.font = '24px Arial';
-        ctx.fillText(option.name, x + width / 2, y + 40);
+        ctx.font = `bold ${nameSize}px Arial`;
+        ctx.fillText(option.name, x + width / 2, drawY + 36);
         
         // 3. 업그레이드 설명
-        ctx.font = '18px Arial';
+        ctx.font = `${descSize}px Arial`;
         ctx.fillStyle = '#bdc3c7';
-        ctx.fillText(option.description, x + width / 2, y + 100);
+        drawWrappedCenterText(ctx, option.description, x + width / 2, drawY + 92, width - 28, descSize * 1.35, 3);
     }
+
+    ctx.textBaseline = 'alphabetic';
+}
+
+function getUpgradeLayout(canvas, optionCount) {
+    const isNarrow = canvas.width < 760;
+
+    if (isNarrow) {
+        const columns = 1;
+        const padding = Math.max(8, Math.min(18, canvas.height * 0.012));
+        const topSpace = Math.max(60, Math.min(90, canvas.height * 0.12));
+        const dropOffset = Math.max(20, Math.min(48, canvas.height * 0.06));
+        const sideMargin = Math.max(14, Math.min(24, canvas.width * 0.05));
+        const boxWidth = canvas.width - sideMargin * 2;
+        const availableHeight = canvas.height - topSpace - padding * (optionCount - 1) - 12;
+        const boxHeight = Math.max(80, availableHeight / optionCount);
+        const totalHeight = boxHeight * optionCount + padding * (optionCount - 1);
+        const maxStartY = Math.max(8, canvas.height - totalHeight - 8);
+        const startY = Math.min(topSpace + dropOffset, maxStartY);
+        return {
+            boxWidth,
+            boxHeight,
+            padding,
+            columns,
+            startX: sideMargin,
+            startY
+        };
+    }
+
+    const columns = Math.min(optionCount, 3);
+    const padding = Math.max(18, Math.min(30, canvas.width * 0.025));
+    const boxWidth = Math.max(180, Math.min(250, (canvas.width - padding * (columns + 1)) / columns));
+    const boxHeight = Math.max(220, Math.min(350, canvas.height * 0.55));
+    const rows = Math.ceil(optionCount / columns);
+    const totalWidth = boxWidth * columns + padding * (columns - 1);
+    const totalHeight = boxHeight * rows + padding * (rows - 1);
+    const startX = (canvas.width - totalWidth) / 2;
+    const dropOffset = Math.max(16, Math.min(42, canvas.height * 0.05));
+    const startY = Math.min((canvas.height - totalHeight) / 2 + dropOffset, canvas.height - totalHeight - 8);
+
+    return { boxWidth, boxHeight, padding, columns, startX, startY };
+}
+
+function drawWrappedCenterText(ctx, text, centerX, startY, maxWidth, lineHeight, maxLines = 3) {
+    const words = String(text).split(' ');
+    const lines = [];
+    let current = '';
+
+    for (const word of words) {
+        const test = current ? `${current} ${word}` : word;
+        if (ctx.measureText(test).width <= maxWidth) {
+            current = test;
+            continue;
+        }
+        if (current) lines.push(current);
+        current = word;
+        if (lines.length === maxLines - 1) break;
+    }
+
+    if (current && lines.length < maxLines) {
+        lines.push(current);
+    }
+
+    lines.forEach((line, i) => {
+        ctx.fillText(line, centerX, startY + i * lineHeight);
+    });
 }
 
 

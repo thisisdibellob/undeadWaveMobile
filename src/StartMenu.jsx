@@ -1,8 +1,170 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import './StartMenu.css'; // 기존 style.css 내용을 여기로
 
 function StartMenu({ onStart }) {
   const [scrollValue, setScrollValue] = useState(0);
+  const [isStartPressed, setIsStartPressed] = useState(false);
+  const [isHomePressed, setIsHomePressed] = useState(false);
+  const [isStoryPressed, setIsStoryPressed] = useState(false);
+  const [isPlayPressed, setIsPlayPressed] = useState(false);
+  const startTriggeredRef = useRef(false);
+  const startButtonRef = useRef(null);
+  const activeTouchIdRef = useRef(null);
+  const outsideCancelTimerRef = useRef(null);
+  const homeLinkRef = useRef(null);
+  const storyLinkRef = useRef(null);
+  const playLinkRef = useRef(null);
+  const homeTouchIdRef = useRef(null);
+  const storyTouchIdRef = useRef(null);
+  const playTouchIdRef = useRef(null);
+  const homeCancelTimerRef = useRef(null);
+  const storyCancelTimerRef = useRef(null);
+  const playCancelTimerRef = useRef(null);
+  const START_PRESS_CANCEL_DELAY = 180;
+
+  // 시작 처리는 반드시 "떼는 순간"에만 실행해서 모바일 버튼 감각을 맞춘다.
+  const handleStartTap = () => {
+    if (startTriggeredRef.current) return;
+    startTriggeredRef.current = true;
+    onStart();
+  };
+
+  // 버튼 기준으로 터치 좌표가 내부인지 판단한다.
+  const isInsideStartButton = (touch) => {
+    const buttonEl = startButtonRef.current;
+    if (!buttonEl) return false;
+    const rect = buttonEl.getBoundingClientRect();
+    return (
+      touch.clientX >= rect.left &&
+      touch.clientX <= rect.right &&
+      touch.clientY >= rect.top &&
+      touch.clientY <= rect.bottom
+    );
+  };
+
+  const clearOutsideCancelTimer = () => {
+    if (!outsideCancelTimerRef.current) return;
+    clearTimeout(outsideCancelTimerRef.current);
+    outsideCancelTimerRef.current = null;
+  };
+
+  const clearPressedState = () => {
+    clearOutsideCancelTimer();
+    activeTouchIdRef.current = null;
+    setIsStartPressed(false);
+  };
+
+  const navigateSection = (targetId) => {
+    if (!targetId) {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+    document.getElementById(targetId)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
+  const isInsideElement = (touch, ref) => {
+    const el = ref.current;
+    if (!el) return false;
+    const rect = el.getBoundingClientRect();
+    return (
+      touch.clientX >= rect.left &&
+      touch.clientX <= rect.right &&
+      touch.clientY >= rect.top &&
+      touch.clientY <= rect.bottom
+    );
+  };
+
+  // 상단 메뉴 링크들에 시작 버튼과 동일한 "눌렀다 떼면 실행" 터치 패턴을 재사용한다.
+  const createNavTouchHandlers = ({ ref, setPressed, touchIdRef, timerRef, onReleaseInside }) => {
+    const clearTimer = () => {
+      if (!timerRef.current) return;
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+    };
+
+    const clearState = () => {
+      clearTimer();
+      touchIdRef.current = null;
+      setPressed(false);
+    };
+
+    return {
+      onTouchStart: (e) => {
+        e.preventDefault();
+        const touch = e.changedTouches[0];
+        if (!touch) return;
+        touchIdRef.current = touch.identifier;
+        setPressed(true);
+        clearTimer();
+      },
+      onTouchMove: (e) => {
+        e.preventDefault();
+        const touch = Array.from(e.changedTouches).find(
+          (t) => t.identifier === touchIdRef.current
+        );
+        if (!touch) return;
+
+        if (isInsideElement(touch, ref)) {
+          clearTimer();
+          setPressed(true);
+          return;
+        }
+
+        if (!timerRef.current) {
+          timerRef.current = setTimeout(() => {
+            clearState();
+          }, START_PRESS_CANCEL_DELAY);
+        }
+      },
+      onTouchEnd: (e) => {
+        e.preventDefault();
+        const touch = Array.from(e.changedTouches).find(
+          (t) => t.identifier === touchIdRef.current
+        );
+        if (!touch) return;
+        const shouldRun = isInsideElement(touch, ref);
+        clearState();
+        if (shouldRun) onReleaseInside();
+      },
+      onTouchCancel: () => {
+        clearState();
+      },
+      clearState,
+    };
+  };
+
+  const homeTouch = createNavTouchHandlers({
+    ref: homeLinkRef,
+    setPressed: setIsHomePressed,
+    touchIdRef: homeTouchIdRef,
+    timerRef: homeCancelTimerRef,
+    onReleaseInside: () => navigateSection(''),
+  });
+
+  const storyTouch = createNavTouchHandlers({
+    ref: storyLinkRef,
+    setPressed: setIsStoryPressed,
+    touchIdRef: storyTouchIdRef,
+    timerRef: storyCancelTimerRef,
+    onReleaseInside: () => navigateSection('sec'),
+  });
+
+  const playTouch = createNavTouchHandlers({
+    ref: playLinkRef,
+    setPressed: setIsPlayPressed,
+    touchIdRef: playTouchIdRef,
+    timerRef: playCancelTimerRef,
+    onReleaseInside: () => navigateSection('play'),
+  });
+
+  useEffect(() => {
+    return () => {
+      clearOutsideCancelTimer();
+      homeTouch.clearState();
+      storyTouch.clearState();
+      playTouch.clearState();
+    };
+  }, []);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -17,9 +179,45 @@ function StartMenu({ onStart }) {
       <header style={{ top: scrollValue * 0.5 + 'px' }}>
         <a href="#" className="logo"></a>
         <ul>
-          <li><a href="#" className="active">홈</a></li>
-          <li><a href="#sec">스토리</a></li>
-          <li><a href="#play">조작 방식</a></li>
+          <li>
+            <button
+              type="button"
+              ref={homeLinkRef}
+              className={`active ${isHomePressed ? 'nav-pressed' : ''}`}
+              onTouchStart={homeTouch.onTouchStart}
+              onTouchMove={homeTouch.onTouchMove}
+              onTouchEnd={homeTouch.onTouchEnd}
+              onTouchCancel={homeTouch.onTouchCancel}
+            >
+              홈
+            </button>
+          </li>
+          <li>
+            <button
+              type="button"
+              ref={storyLinkRef}
+              className={isStoryPressed ? 'nav-pressed' : ''}
+              onTouchStart={storyTouch.onTouchStart}
+              onTouchMove={storyTouch.onTouchMove}
+              onTouchEnd={storyTouch.onTouchEnd}
+              onTouchCancel={storyTouch.onTouchCancel}
+            >
+              스토리
+            </button>
+          </li>
+          <li>
+            <button
+              type="button"
+              ref={playLinkRef}
+              className={isPlayPressed ? 'nav-pressed' : ''}
+              onTouchStart={playTouch.onTouchStart}
+              onTouchMove={playTouch.onTouchMove}
+              onTouchEnd={playTouch.onTouchEnd}
+              onTouchCancel={playTouch.onTouchCancel}
+            >
+              조작 방식
+            </button>
+          </li>
         </ul>
       </header>
 
@@ -32,7 +230,52 @@ function StartMenu({ onStart }) {
           Undead Wave
         </h2>
         
-        <button onClick={onStart} id="btn" style={{ marginTop: scrollValue * 1.5 + 'px', zIndex: 100}}>
+        <button
+          ref={startButtonRef}
+          onClick={handleStartTap}
+          onTouchStart={(e) => {
+            e.preventDefault();
+            const touch = e.changedTouches[0];
+            if (!touch) return;
+            activeTouchIdRef.current = touch.identifier;
+            setIsStartPressed(true);
+            clearOutsideCancelTimer();
+          }}
+          onTouchMove={(e) => {
+            e.preventDefault();
+            const touch = Array.from(e.changedTouches).find(
+              (t) => t.identifier === activeTouchIdRef.current
+            );
+            if (!touch) return;
+
+            if (isInsideStartButton(touch)) {
+              clearOutsideCancelTimer();
+              if (!isStartPressed) setIsStartPressed(true);
+              return;
+            }
+
+            if (!outsideCancelTimerRef.current) {
+              // 버튼 밖으로 빠져나간 뒤 일정 시간 유지되면 눌림 상태를 해제한다.
+              outsideCancelTimerRef.current = setTimeout(() => {
+                clearPressedState();
+              }, START_PRESS_CANCEL_DELAY);
+            }
+          }}
+          onTouchEnd={(e) => {
+            e.preventDefault();
+            const touch = Array.from(e.changedTouches).find(
+              (t) => t.identifier === activeTouchIdRef.current
+            );
+            if (!touch) return;
+            const shouldStart = isStartPressed && isInsideStartButton(touch);
+            clearPressedState();
+            if (shouldStart) handleStartTap();
+          }}
+          onTouchCancel={clearPressedState}
+          id="btn"
+          className={isStartPressed ? 'btn-pressed' : ''}
+          style={{ marginTop: scrollValue * 1.5 + 'px', zIndex: 100 }}
+        >
           게임시작
         </button>
 
