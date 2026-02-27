@@ -5,6 +5,7 @@ import android.view.View;
 import android.view.WindowInsets;
 import android.view.WindowInsetsController;
 import android.os.Build;
+import androidx.activity.OnBackPressedCallback;
 import com.getcapacitor.BridgeActivity;
 
 public class MainActivity extends BridgeActivity {
@@ -12,6 +13,21 @@ public class MainActivity extends BridgeActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         hideSystemUI();
+
+        // Android 백 제스처/하드웨어 백 모두 이 콜백으로 들어온다.
+        getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
+            @Override
+            public void handleOnBackPressed() {
+                if (bridge != null) {
+                    bridge.triggerJSEvent("appBackButton", "window");
+                    return;
+                }
+                // 브리지가 없으면 기본 뒤로가기 동작으로 폴백
+                setEnabled(false);
+                MainActivity.super.getOnBackPressedDispatcher().onBackPressed();
+                setEnabled(true);
+            }
+        });
     }
 
     @Override

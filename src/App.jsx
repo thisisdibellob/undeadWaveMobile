@@ -8,6 +8,7 @@ const BASE_HEIGHT = 390;
 
 function App() {
   const [gameState, setGameState] = useState('menu');
+  const [playSession, setPlaySession] = useState(0);
   const { scale } = useGameScale();
   const bgmRef = useRef(null);
   const shouldResumeBgmRef = useRef(false);
@@ -75,6 +76,28 @@ function App() {
     }
 
     audio.play().catch(() => {});
+    setPlaySession((prev) => prev + 1);
+    setGameState('play');
+  };
+
+  // 인게임 메뉴 버튼으로 나갈 때 BGM을 정리하고 메인 메뉴로 복귀한다.
+  const handleBackToMenu = () => {
+    const bgm = bgmRef.current;
+    if (bgm) {
+      bgm.pause();
+      bgm.currentTime = 0;
+    }
+    setGameState('menu');
+  };
+
+  const handleRestartGame = () => {
+    const bgm = bgmRef.current;
+    if (bgm) {
+      bgm.pause();
+      bgm.currentTime = 0;
+      bgm.play().catch(() => {});
+    }
+    setPlaySession((prev) => prev + 1);
     setGameState('play');
   };
 
@@ -100,7 +123,12 @@ function App() {
         {isMenu ? (
           <StartMenu onStart={handleStart} />
         ) : (
-          <GameScene bgmRef={bgmRef} />
+          <GameScene
+            key={playSession}
+            bgmRef={bgmRef}
+            onMenu={handleBackToMenu}
+            onRestart={handleRestartGame}
+          />
         )}
       </div>
     </div>

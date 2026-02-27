@@ -2,13 +2,13 @@ import { useEffect, useRef } from 'react';
 
 import { Player } from './logic/Player.js';
 import { World } from './logic/World.js';
-import { drawUI, drawGameOverScreen, drawUpgradeOptions, calculateUpgradeOptionBounds, statUI, drawMobileUI, getRestartButtonBounds } from './logic/Ui.js';
+import { drawUI, drawGameOverScreen, drawUpgradeOptions, calculateUpgradeOptionBounds, statUI, drawMobileUI, getRestartButtonBounds, getInGameMenuButtonBounds, drawPauseMenu, getPauseMenuButtonBounds } from './logic/Ui.js';
 import { EnemyManager } from './logic/EnemyManager.js';
 import { WeaponManager } from './logic/WeaponManager.js';
 import { PartsManager } from './logic/PartsManager.js';
 import { SurvivorManager } from './logic/SurvivorManager.js';
 
-function GameScene({ bgmRef }) {
+function GameScene({ bgmRef, onMenu, onRestart }) {
   const canvasRef = useRef(null);
   const requestRef = useRef(null); // 애니메이션 프레임 취소용
 
@@ -39,6 +39,16 @@ function GameScene({ bgmRef }) {
     // ------------ 터치 이벤트 핸들러 ------------
     const handleTouchStart = (e) => {
       if (e.cancelable) e.preventDefault();
+
+      for (let i = 0; i < e.changedTouches.length; i++) {
+        const touch = e.changedTouches[i];
+        if (trySelectPauseMenuOption(touch.clientX, touch.clientY)) {
+          return;
+        }
+        if (tryOpenInGameMenu(touch.clientX, touch.clientY)) {
+          return;
+        }
+      }
 
       if (currentState === GAME_STATE.GAMEOVER) {
         for (let i = 0; i < e.changedTouches.length; i++) {
@@ -222,7 +232,7 @@ function GameScene({ bgmRef }) {
 
     // ------------ 게임 상태 및 변수 ------------
     let lastFrameTime = 0;
-    const GAME_STATE = { PLAYING: 'playing', UPGRADING: 'upgrading', GAMEOVER: 'gameover' };
+    const GAME_STATE = { PLAYING: 'playing', UPGRADING: 'upgrading', GAMEOVER: 'gameover', PAUSED_MENU: 'paused_menu' };
     let currentState = GAME_STATE.PLAYING;
     let currentUpgradeOptions = [];
     let upgradePressedIndex = -1;
@@ -341,6 +351,65 @@ function GameScene({ bgmRef }) {
       return false;
     };
 
+    // 우측 상단 메뉴 버튼 터치/클릭 시 메인 메뉴 화면으로 복귀한다.
+    const tryOpenInGameMenu = (x, y) => {
+      if (currentState === GAME_STATE.GAMEOVER || currentState === GAME_STATE.PAUSED_MENU) return false;
+      const button = getInGameMenuButtonBounds({ width: viewportWidth, height: viewportHeight });
+      const isInside = x >= button.x && x <= button.x + button.width &&
+        y >= button.y && y <= button.y + button.height;
+      if (!isInside) return false;
+      currentState = GAME_STATE.PAUSED_MENU;
+      return true;
+    };
+
+    const trySelectPauseMenuOption = (x, y) => {
+      if (currentState !== GAME_STATE.PAUSED_MENU) return false;
+      const buttons = getPauseMenuButtonBounds({ width: viewportWidth, height: viewportHeight });
+      const selected = buttons.find((btn) =>
+        x >= btn.x && x <= btn.x + btn.width && y >= btn.y && y <= btn.y + btn.height
+      );
+      if (!selected) return false;
+
+      if (selected.id === 'resume') {
+        currentState = GAME_STATE.PLAYING;
+      }
+      if (selected.id === 'restart') {
+        onRestart?.();
+      }
+      if (selected.id === 'menu') {
+        onMenu?.();
+      }
+      return true;
+    };
+
+    // 안드로이드 백버튼: 플레이 중이면 메뉴 오버레이, 메뉴 오버레이면 즉시 재개
+    const handleGameBackAction = () => {
+      if (currentState === GAME_STATE.PAUSED_MENU) {
+        currentState = GAME_STATE.PLAYING;
+        return true;
+      }
+      if (currentState === GAME_STATE.PLAYING || currentState === GAME_STATE.UPGRADING) {
+        currentState = GAME_STATE.PAUSED_MENU;
+        return true;
+      }
+      return false;
+    };
+
+    const handlePopState = (event) => {
+      if (!handleGameBackAction()) return;
+      event?.preventDefault?.();
+      window.history.pushState({ gameBackTrap: true }, '');
+    };
+
+    const handleNativeBackButton = () => {
+      if (!handleGameBackAction()) return;
+      window.history.pushState({ gameBackTrap: true }, '');
+    };
+
+    const handleAppBackButton = () => {
+      handleGameBackAction();
+    };
+
     const trySelectWeaponSlot = (x, y) => {
       if (currentState !== GAME_STATE.PLAYING) return false;
 
@@ -432,6 +501,8 @@ function GameScene({ bgmRef }) {
     };
 
     const handleClick = (event) => {
+      if (trySelectPauseMenuOption(event.clientX, event.clientY)) return;
+      if (tryOpenInGameMenu(event.clientX, event.clientY)) return;
       if (tryRestartFromGameOver(event.clientX, event.clientY)) return;
       if (trySelectUpgradeOption(event.clientX, event.clientY)) {
         clearUpgradePress();
@@ -449,6 +520,30 @@ function GameScene({ bgmRef }) {
     document.addEventListener('keyup', handleKeyUp);
     document.addEventListener('click', handleClick);
     document.addEventListener('mousemove', handleMouseMove);
+
+    // 게임 화면에 들어오면 백버튼을 앱 종료 대신 인게임 상태 전환에 사용한다.
+    let removeNativeBackListener = null;
+    window.history.pushState({ gameBackTrap: true }, '');
+    window.addEventListener('popstate', handlePopState);
+    window.addEventListener('appBackButton', handleAppBackButton);
+    const capacitorAppPlugin = window?.Capacitor?.Plugins?.App;
+    if (capacitorAppPlugin?.addListener) {
+      const maybeHandle = capacitorAppPlugin.addListener('backButton', handleNativeBackButton);
+      // Capacitor 버전에 따라 Promise 또는 핸들을 직접 반환하므로 둘 다 대응한다.
+      if (maybeHandle && typeof maybeHandle.then === 'function') {
+        maybeHandle.then((handle) => {
+          removeNativeBackListener = () => handle?.remove?.();
+        }).catch(() => {});
+      } else if (maybeHandle && typeof maybeHandle.remove === 'function') {
+        removeNativeBackListener = () => maybeHandle.remove();
+      }
+    } else {
+      // 브리지가 없는 환경(웹 브라우저/일부 빌드)에서는 문서 이벤트를 보조로 사용한다.
+      document.addEventListener('backbutton', handleNativeBackButton);
+      removeNativeBackListener = () => {
+        document.removeEventListener('backbutton', handleNativeBackButton);
+      };
+    }
 
     // ------------ 헬퍼 함수 ------------
     const clearCanvas = () => ctx.clearRect(0, 0, viewportWidth, viewportHeight);
@@ -488,6 +583,15 @@ function GameScene({ bgmRef }) {
         ); 
         requestRef.current = requestAnimationFrame(update); 
         return; 
+      }
+
+      if (currentState === GAME_STATE.PAUSED_MENU) {
+        clearCanvas();
+        drawPausedGame();
+        drawUI(ctx, player, weaponManager.shootMod, partsManager.num, weaponManager, timestamp);
+        drawPauseMenu(ctx, { width: viewportWidth, height: viewportHeight });
+        requestRef.current = requestAnimationFrame(update);
+        return;
       }
 
       if (survivorManager.isSpawn == false && survivorManager.newSurvivor == null) {
@@ -546,6 +650,9 @@ function GameScene({ bgmRef }) {
       document.removeEventListener('keyup', handleKeyUp);
       document.removeEventListener('click', handleClick);
       document.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('popstate', handlePopState);
+      window.removeEventListener('appBackButton', handleAppBackButton);
+      removeNativeBackListener?.();
       cancelAnimationFrame(requestRef.current);
       if (gameBGM) {
         gameBGM.pause(); // 화면 나가면 음악 끄기

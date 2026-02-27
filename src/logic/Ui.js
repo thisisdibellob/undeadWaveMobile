@@ -146,6 +146,75 @@ export function drawUI(ctx, player, shootMod, partsNum, weaponManager, timestamp
     // ctx.font = 'bold 20px Arial';
     // ctx.fillStyle = 'black';
     // ctx.fillText(`${Math.floor(player.rollCooldownTimer/400)}`, skillX+20, skillY+50);
+
+    // 우측 상단 인게임 메뉴 버튼
+    drawInGameMenuButton(ctx, { width: window.innerWidth, height: window.innerHeight });
+}
+
+// 인게임 메뉴 버튼의 터치/클릭 판정 영역을 반환한다.
+export function getInGameMenuButtonBounds(canvas) {
+    const width = 64;
+    const height = 28;
+    const x = canvas.width - width - 12;
+    const y = 26; // 상단 경험치/레벨 UI 바로 아래
+    return { x, y, width, height };
+}
+
+function drawInGameMenuButton(ctx, canvas) {
+    const button = getInGameMenuButtonBounds(canvas);
+    ctx.fillStyle = 'rgba(15, 15, 15, 0.75)';
+    ctx.fillRect(button.x, button.y, button.width, button.height);
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.9)';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(button.x, button.y, button.width, button.height);
+
+    ctx.fillStyle = 'white';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.font = 'bold 13px Arial';
+    ctx.fillText('메뉴', button.x + button.width / 2, button.y + button.height / 2);
+    ctx.textBaseline = 'alphabetic';
+}
+
+// 일시정지 메뉴의 3개 버튼 영역을 계산한다.
+export function getPauseMenuButtonBounds(canvas) {
+    const width = Math.min(300, Math.max(220, canvas.width * 0.56));
+    const height = 56;
+    const gap = 14;
+    const totalHeight = height * 3 + gap * 2;
+    const startX = canvas.width / 2 - width / 2;
+    const startY = canvas.height / 2 - totalHeight / 2;
+
+    return [
+        { id: 'resume', label: '게임 재개', x: startX, y: startY, width, height },
+        { id: 'restart', label: '처음부터 다시 시작', x: startX, y: startY + (height + gap), width, height },
+        { id: 'menu', label: '메인 메뉴로 돌아가기', x: startX, y: startY + (height + gap) * 2, width, height },
+    ];
+}
+
+export function drawPauseMenu(ctx, canvas) {
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.55)';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    const buttons = getPauseMenuButtonBounds(canvas);
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.font = 'bold 34px Arial';
+    ctx.fillStyle = 'white';
+    ctx.fillText('메뉴', canvas.width / 2, buttons[0].y - 38);
+
+    buttons.forEach((btn) => {
+        ctx.fillStyle = 'rgba(20, 20, 20, 0.88)';
+        ctx.fillRect(btn.x, btn.y, btn.width, btn.height);
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.85)';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(btn.x, btn.y, btn.width, btn.height);
+        ctx.fillStyle = 'white';
+        ctx.font = 'bold 20px Arial';
+        ctx.fillText(btn.label, btn.x + btn.width / 2, btn.y + btn.height / 2);
+    });
+
+    ctx.textBaseline = 'alphabetic';
 }
 
 /**
