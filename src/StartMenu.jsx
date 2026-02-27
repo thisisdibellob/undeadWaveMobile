@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import './StartMenu.css'; // 기존 style.css 내용을 여기로
 
 function StartMenu({ onStart }) {
   const [scrollValue, setScrollValue] = useState(0);
+  const [showScrollTop, setShowScrollTop] = useState(false);
   const [isStartPressed, setIsStartPressed] = useState(false);
   const [isHomePressed, setIsHomePressed] = useState(false);
   const [isStoryPressed, setIsStoryPressed] = useState(false);
@@ -21,6 +23,8 @@ function StartMenu({ onStart }) {
   const storyCancelTimerRef = useRef(null);
   const playCancelTimerRef = useRef(null);
   const START_PRESS_CANCEL_DELAY = 180;
+  const startMenuRootRef = useRef(null);
+  const scrollContainerRef = useRef(null);
 
   // 시작 처리는 반드시 "떼는 순간"에만 실행해서 모바일 버튼 감각을 맞춘다.
   const handleStartTap = () => {
@@ -55,11 +59,38 @@ function StartMenu({ onStart }) {
   };
 
   const navigateSection = (targetId) => {
+    const scrollTarget = scrollContainerRef.current;
+
     if (!targetId) {
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      if (scrollTarget && scrollTarget !== window) {
+        scrollTarget.scrollTo({ top: 0, behavior: 'smooth' });
+      } else {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
       return;
     }
-    document.getElementById(targetId)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+    const section = document.getElementById(targetId);
+    if (!section) return;
+
+    if (scrollTarget && scrollTarget !== window) {
+      const parentRect = scrollTarget.getBoundingClientRect();
+      const sectionRect = section.getBoundingClientRect();
+      const targetTop = scrollTarget.scrollTop + (sectionRect.top - parentRect.top);
+      scrollTarget.scrollTo({ top: targetTop, behavior: 'smooth' });
+      return;
+    }
+
+    section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
+  const scrollToTop = () => {
+    const scrollTarget = scrollContainerRef.current;
+    if (scrollTarget && scrollTarget !== window) {
+      scrollTarget.scrollTo({ top: 0, behavior: 'smooth' });
+    } else {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
   };
 
   const isInsideElement = (touch, ref) => {
@@ -167,15 +198,26 @@ function StartMenu({ onStart }) {
   }, []);
 
   useEffect(() => {
+    const parentScroll = startMenuRootRef.current?.parentElement;
+    const target = parentScroll && parentScroll.scrollHeight > parentScroll.clientHeight
+      ? parentScroll
+      : window;
+    scrollContainerRef.current = target;
+
+    const readTop = () => (target === window ? window.scrollY : target.scrollTop);
     const handleScroll = () => {
-      setScrollValue(window.scrollY);
+      const top = readTop();
+      setScrollValue(top);
+      setShowScrollTop(top > 100);
     };
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
+    handleScroll();
+
+    target.addEventListener('scroll', handleScroll, { passive: true });
+    return () => target.removeEventListener('scroll', handleScroll);
   }, []);
 
   return (
-    <div className="start-menu">
+    <div className="start-menu" ref={startMenuRootRef}>
       <header style={{ top: scrollValue * 0.5 + 'px' }}>
         <a href="#" className="logo"></a>
         <ul>
@@ -358,6 +400,21 @@ function StartMenu({ onStart }) {
         </div>
         </div>
       </div>
+
+      {showScrollTop && createPortal(
+        <button
+          type="button"
+          className="scroll-top-btn"
+          onClick={scrollToTop}
+          onTouchEnd={(e) => {
+            e.preventDefault();
+            scrollToTop();
+          }}
+        >
+          맨 위로
+        </button>,
+        document.body
+      )}
 
     </div>
   );
