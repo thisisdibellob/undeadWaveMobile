@@ -67,6 +67,10 @@ export class Player{
 
         // 스코어
         this.score = 0;
+
+        // 이동 입력 전 스킬(구르기/백스텝)을 써도 방향 계산이 깨지지 않도록 기본 방향을 둔다.
+        this.lastMoveX = 0;
+        this.lastMoveY = 1;
     }
 
     setInitialPosition(worldWidth, worldHeight) {
@@ -92,8 +96,11 @@ export class Player{
         this.rollCooldownTimer = this.rollCooldown;
 
         // 이동 방향이 없으면 (가만히 서 있었으면) 기본값으로 설정
-        if (this.lastMoveX === 0 && this.lastMoveY === 0) {
-             this.lastMoveY = 1; 
+        // 방향값이 비정상(undefined/NaN) 이거나 정지 상태면 아래 방향을 기본값으로 사용한다.
+        if (!Number.isFinite(this.lastMoveX) || !Number.isFinite(this.lastMoveY) ||
+            (this.lastMoveX === 0 && this.lastMoveY === 0)) {
+            this.lastMoveX = 0;
+            this.lastMoveY = 1;
         }
 
         return true;
@@ -117,8 +124,11 @@ export class Player{
         this.backstepCooldownTimer = this.backstepCooldown;
 
         // 이동 방향이 없으면 (가만히 서 있었으면) 기본값으로 설정
-        if (this.lastMoveX === 0 && this.lastMoveY === 0) {
-            this.lastMoveY = 1; 
+        // 방향값이 비정상(undefined/NaN) 이거나 정지 상태면 아래 방향을 기본값으로 사용한다.
+        if (!Number.isFinite(this.lastMoveX) || !Number.isFinite(this.lastMoveY) ||
+            (this.lastMoveX === 0 && this.lastMoveY === 0)) {
+            this.lastMoveX = 0;
+            this.lastMoveY = 1;
         }
 
         return true;
@@ -199,6 +209,12 @@ export class Player{
                 moveX = normalizedMoveX * currentSpeed;
                 moveY = normalizedMoveY * currentSpeed;
             }
+        }
+
+        // 누적 연산 전에 좌표가 비정상이면 안전한 값으로 복구한다.
+        if (!Number.isFinite(this.x) || !Number.isFinite(this.y)) {
+            this.x = world.width / 2 - this.width / 2;
+            this.y = world.height / 2 - this.height / 2;
         }
 
         // 플레이어 위치 업데이트
