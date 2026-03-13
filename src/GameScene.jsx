@@ -232,7 +232,13 @@ function GameScene({ bgmRef, onMenu, onRestart }) {
 
     // ------------ 게임 상태 및 변수 ------------
     let lastFrameTime = 0;
-    const GAME_STATE = { PLAYING: 'playing', UPGRADING: 'upgrading', GAMEOVER: 'gameover', PAUSED_MENU: 'paused_menu' };
+    const GAME_STATE = {
+      PLAYING: 'playing',
+      UPGRADING: 'upgrading',
+      GAMEOVER: 'gameover',
+      PAUSED_MENU: 'paused_menu',
+      PAUSED_STATS: 'paused_stats',
+    };
     let currentState = GAME_STATE.PLAYING;
     let currentUpgradeOptions = [];
     let upgradePressedIndex = -1;
@@ -373,6 +379,9 @@ function GameScene({ bgmRef, onMenu, onRestart }) {
       if (selected.id === 'resume') {
         currentState = GAME_STATE.PLAYING;
       }
+      if (selected.id === 'stats') {
+        currentState = GAME_STATE.PAUSED_STATS;
+      }
       if (selected.id === 'restart') {
         onRestart?.();
       }
@@ -386,6 +395,10 @@ function GameScene({ bgmRef, onMenu, onRestart }) {
     const handleGameBackAction = () => {
       if (currentState === GAME_STATE.PAUSED_MENU) {
         currentState = GAME_STATE.PLAYING;
+        return true;
+      }
+      if (currentState === GAME_STATE.PAUSED_STATS) {
+        currentState = GAME_STATE.PAUSED_MENU;
         return true;
       }
       if (currentState === GAME_STATE.PLAYING || currentState === GAME_STATE.UPGRADING) {
@@ -590,6 +603,15 @@ function GameScene({ bgmRef, onMenu, onRestart }) {
         drawPausedGame();
         drawUI(ctx, player, weaponManager.shootMod, partsManager.num, weaponManager, timestamp);
         drawPauseMenu(ctx, { width: viewportWidth, height: viewportHeight });
+        requestRef.current = requestAnimationFrame(update);
+        return;
+      }
+
+      if (currentState === GAME_STATE.PAUSED_STATS) {
+        clearCanvas();
+        drawPausedGame();
+        drawUI(ctx, player, weaponManager.shootMod, partsManager.num, weaponManager, timestamp);
+        statUI(true, ctx, player);
         requestRef.current = requestAnimationFrame(update);
         return;
       }

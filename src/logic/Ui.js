@@ -35,7 +35,7 @@ export function drawUI(ctx, player, shootMod, partsNum, weaponManager, timestamp
 
     // --- 2. 경험치 바 ---
     const barWidth = window.innerWidth-2;
-    const barHeight = 20;
+    const barHeight = 10;
     const barX = 1;
     const barY = 1;
     const expRatio = player.exp / player.expToNextLevel; // 현재 경험치 비율 (0.0 ~ 1.0)
@@ -51,12 +51,12 @@ export function drawUI(ctx, player, shootMod, partsNum, weaponManager, timestamp
     // --- 3. 레벨 및 경험치 텍스트 ---
     ctx.fillStyle = 'white';
     ctx.textAlign = 'left';
-    ctx.font = 'bold 13px Arial';
-    ctx.fillText(`LV ${player.level}`, window.innerWidth-40, 11);
+    ctx.font = 'bold 7px Arial';
+    ctx.fillText(`LV ${player.level}`, window.innerWidth-40, 7);
 
     // --- 4. 무기 선택창 ---
     let weaponX = 10;
-    let weaponY = 30;
+    let weaponY = 20;
     let weaponWidth = 52.5;
     let weaponHeight = 75;
     ctx.lineWidth = 2;
@@ -181,14 +181,15 @@ export function getPauseMenuButtonBounds(canvas) {
     const width = Math.min(300, Math.max(220, canvas.width * 0.56));
     const height = 56;
     const gap = 14;
-    const totalHeight = height * 3 + gap * 2;
+    const totalHeight = height * 4 + gap * 3;
     const startX = canvas.width / 2 - width / 2;
-    const startY = canvas.height / 2 - totalHeight / 2;
+    const startY = canvas.height / 2 - totalHeight / 2 + 20;
 
     return [
         { id: 'resume', label: '게임 재개', x: startX, y: startY, width, height },
-        { id: 'restart', label: '처음부터 다시 시작', x: startX, y: startY + (height + gap), width, height },
-        { id: 'menu', label: '메인 메뉴로 돌아가기', x: startX, y: startY + (height + gap) * 2, width, height },
+        { id: 'stats', label: '스탯 정보', x: startX, y: startY + (height + gap), width, height },
+        { id: 'restart', label: '처음부터 다시 시작', x: startX, y: startY + (height + gap) * 2, width, height },
+        { id: 'menu', label: '메인 메뉴로 돌아가기', x: startX, y: startY + (height + gap) * 3, width, height },
     ];
 }
 
@@ -420,9 +421,9 @@ function drawWrappedCenterText(ctx, text, centerX, startY, maxWidth, lineHeight,
 export function statUI(isSpace, ctx, player) {
 
     const barWidth = window.innerWidth * 1/3;
-    const barHeight = window.innerHeight * 1/2;
+    const barHeight = window.innerHeight * 1/2 + 100;
     const barX = window.innerWidth/3;
-    const barY = window.innerHeight * 1/4; 
+    const barY = (window.innerHeight-barHeight) * 1/2; 
 
     const imgHp = new Image();
     const imgAtk = new Image();
@@ -447,23 +448,33 @@ export function statUI(isSpace, ctx, player) {
         ctx.fill();
 
         // 이미지 
-        ctx.drawImage(imgHp, barX+180, barY+50, 55, 55); 
-        ctx.drawImage(imgAtk, barX+175, barY+100, 65, 65); 
-        ctx.drawImage(imgDef, barX+180, barY+157, 55, 50);     
-        ctx.drawImage(imgLv, barX+182, barY+215, 50, 50);
-        ctx.drawImage(imgExp, barX+182, barY+270, 50, 50);
-        ctx.drawImage(imgSpeed, barX+170, barY+312, 65, 65); 
+        const startY = barY + 25;
+        let gap = 0;
+        const imgHpSize = 35;
+        const imgAtkSize = 45;
+        const imgDefSize = 35;
+        const imgLvSize = 30;
+        const imgExpSize = 30;
+        const imgSpeedSize = 45;
+        ctx.drawImage(imgHp, barX+90, startY, imgHpSize, imgHpSize); gap += imgHpSize + 5;
+        ctx.drawImage(imgAtk, barX+85, startY+gap, 45, 45); gap += imgAtkSize + 5;
+        ctx.drawImage(imgDef, barX+90, startY+gap, 35, 30); gap += imgDefSize + 5;
+        ctx.drawImage(imgLv, barX+92, startY+gap, 30, 30); gap += imgLvSize + 5;
+        ctx.drawImage(imgExp, barX+92, startY+gap, 30, 30); gap += imgExpSize + 5;
+        ctx.drawImage(imgSpeed, barX+80, startY+gap, 45, 45);
  
         // 텍스트
         ctx.fillStyle = 'white';
         ctx.textAlign = 'left';
-        ctx.font = 'bold 16px Arial';
-        ctx.fillText(`${player.hp} / ${player.maxHp}`, barX+250, barY+80);
-        ctx.fillText(`${player.damageLv}`, barX+250, barY+136);
-        ctx.fillText(`${player.defense}`, barX+250, barY+190);
-        ctx.fillText(`Lv ${player.level}`, barX+250, barY+245);
-        ctx.fillText(`${player.exp} / ${player.expToNextLevel}`, barX+250, barY+300);
-        ctx.fillText(`${player.speed}`, barX+250, barY+353);
+        ctx.font = 'bold 13px Arial';
+        let gapTxt = 0;
+        const txtStartY = barY+45;
+        ctx.fillText(`${player.hp} / ${player.maxHp}`, barX+150, txtStartY); gapTxt += imgHpSize + 5;
+        ctx.fillText(`${player.damageLv}`, barX+150, txtStartY+gapTxt); gapTxt += imgAtkSize + 5;
+        ctx.fillText(`${player.defense}`, barX+150, txtStartY+gapTxt); gapTxt += imgDefSize + 5;
+        ctx.fillText(`Lv ${player.level}`, barX+150, txtStartY+gapTxt); gapTxt += imgLvSize + 5;
+        ctx.fillText(`${player.exp} / ${player.expToNextLevel}`, barX+150, txtStartY+gapTxt); gapTxt += imgExpSize + 5;
+        ctx.fillText(`${player.speed}`, barX+150, txtStartY+gapTxt);
     }
 }
 
