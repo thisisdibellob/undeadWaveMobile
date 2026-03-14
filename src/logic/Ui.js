@@ -65,7 +65,7 @@ export function drawUI(ctx, player, shootMod, partsNum, weaponManager, timestamp
     ctx.fillStyle = 'white';
     ctx.textAlign = 'left';
     ctx.font = 'bold 7px Arial';
-    ctx.fillText(`LV ${player.level}`, window.innerWidth-40, 7);
+    ctx.fillText(`LV ${player.level}`, window.innerWidth-40, 9);
 
     // --- 4. 무기 선택창 ---
     let weaponX = 10;
