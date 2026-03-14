@@ -39,13 +39,13 @@ export class EnemyManager {
 
         this.SPAWN_INTERVAL = Math.max(500, this.SPAWN_INTERVAL - 100); // 최소 0.5초 간격
 
-        this.zombieHpMultiplier += 1.0;
-        this.zombieSpeedMultiplier += 0.5;
-        this.zombieDamageMultiplier += 1.0;
+        this.zombieHpMultiplier += 0.5;
+        this.zombieSpeedMultiplier += 0.25;
+        this.zombieDamageMultiplier += 0.5;
 
-        this.bossHpMultiplier += 1.0;
-        this.bossSpeedMultiplier += 0.5;
-        this.bossDamageMultiplier += 1.0;
+        this.bossHpMultiplier += 0.5;
+        this.bossSpeedMultiplier += 0.25;
+        this.bossDamageMultiplier += 0.5;
     }
 
     /**

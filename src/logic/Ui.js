@@ -18,6 +18,15 @@ rifleImg.src = "/assets/resource/weapon_image/rifle.png";
 const boomImg = new Image();
 boomImg.src = "/assets/resource/weapon_image/Bomb.png";
 
+const skillDashImg = new Image();
+skillDashImg.src = "/assets/resource/skill_image/dash.png";
+const skillBackstepImg = new Image();
+skillBackstepImg.src = "/assets/resource/skill_image/backstep.png";
+const skillRayImg = new Image();
+skillRayImg.src = "/assets/resource/skill_image/ray.png";
+const skillPullzoneImg = new Image();
+skillPullzoneImg.src = "/assets/resource/skill_image/pullzone.png";
+
 const keyShift = new Image();
 keyShift.src = "/assets/startMenu/shift.gif";
 const keyE = new Image();
@@ -30,6 +39,10 @@ keyR.src = "/assets/startMenu/R.gif";
 
 const partsImg = new Image();
 partsImg.src =  "/assets/resource/weapon_image/parts.png";
+
+// 스킬 버튼 이미지
+const dashImg = new Image();
+dashImg.src = "/assets/resource/skill_image/dash.png";
 
 export function drawUI(ctx, player, shootMod, partsNum, weaponManager, timestamp) {
 
@@ -252,9 +265,13 @@ export function drawGameOverScreen(ctx, canvas, score) {
     ctx.fillStyle = 'white';
     ctx.font = '50px Arial';
     ctx.textAlign = 'center';
-    ctx.fillText('GAME OVER', canvas.width / 2, canvas.height / 2 -60);
+    ctx.fillText('GAME OVER', canvas.width / 2, canvas.height / 2 - 60);
     ctx.font = '30px Arial';
     ctx.fillText(`Score: ${score}`, canvas.width / 2, canvas.height / 2);
+    const best = parseInt(localStorage.getItem('bestScore') || '0', 10);
+    ctx.font = '22px Arial';
+    ctx.fillStyle = '#f4d03f';
+    ctx.fillText(`Best: ${best}`, canvas.width / 2, canvas.height / 2 + 38);
 
     // 게임 오버 시 재시작 버튼 렌더링
     const button = getRestartButtonBounds(canvas);
@@ -275,7 +292,7 @@ export function getRestartButtonBounds(canvas) {
     const width = 220;
     const height = 56;
     const x = canvas.width / 2 - width / 2;
-    const y = canvas.height / 2 + 35;
+    const y = canvas.height / 2 + 75;
     return { x, y, width, height };
 }
 
@@ -567,19 +584,31 @@ export function drawMobileUI (ctx, joystick, rightJoystick, player, weaponManage
         }
 
         // 3. 텍스트 표시
-        ctx.fillStyle = "white";
-        ctx.font = "bold 14px Arial";
-        ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
-        ctx.fillText(text, x, y);
+        if (text instanceof Image) {
+           const aspect = text.naturalWidth / text.naturalHeight;
+           const drawH = r * 1.4;
+           const drawW = drawH * aspect;
+           ctx.save();
+           ctx.beginPath();
+           ctx.arc(x, y, r, 0, Math.PI * 2);
+           ctx.clip();
+           ctx.drawImage(text, x - drawW / 2, y - drawH / 2, drawW, drawH);
+           ctx.restore();
+        } else {
+           ctx.fillStyle = "white";
+           ctx.font = "bold 14px Arial";
+           ctx.textAlign = "center";
+           ctx.textBaseline = "middle";
+           ctx.fillText(text, x, y);
+        }
     };
 
     
 
     const dist = 130;
-    drawButton(rJoyX - dist, rJoyY + 30, 35, "Shift", "rgba(80, 80, 80, 0.5)", rollRatio);          // 9시
-    drawButton(rJoyX - dist * 0.866 + 10, rJoyY - dist * 0.5 + 20, 35, "Q", "rgba(80, 80, 80, 0.5)", qRatio);   // 10시
-    drawButton(rJoyX - dist * 0.5 + 20, rJoyY - dist * 0.866 + 10, 35, "E", "rgba(80, 80, 80, 0.5)", rayRatio);   // 11시
-    drawButton(rJoyX + 30, rJoyY - dist, 35, "R", "rgba(80, 80, 80, 0.5)", tornadoRatio);
+    drawButton(rJoyX - dist, rJoyY + 30, 35, skillDashImg, "rgba(80, 80, 80, 0.5)", rollRatio);          // 9시
+    drawButton(rJoyX - dist * 0.866 + 10, rJoyY - dist * 0.5 + 20, 35, skillBackstepImg, "rgba(80, 80, 80, 0.5)", qRatio);   // 10시
+    drawButton(rJoyX - dist * 0.5 + 20, rJoyY - dist * 0.866 + 10, 35, skillRayImg, "rgba(80, 80, 80, 0.5)", rayRatio);   // 11시
+    drawButton(rJoyX + 30, rJoyY - dist, 35, skillPullzoneImg, "rgba(80, 80, 80, 0.5)", tornadoRatio);
     
 };

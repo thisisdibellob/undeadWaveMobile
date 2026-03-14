@@ -629,7 +629,11 @@ function GameScene({ bgmRef, onMenu, onRestart }) {
       survivorManager.updateAndCollide(player);
 
       const collisionResults = enemyManager.updateAndCollide(player, weaponManager, deltaTime, partsManager, timestamp);
-      if (collisionResults.playerDied) currentState = GAME_STATE.GAMEOVER;
+      if (collisionResults.playerDied) {
+        currentState = GAME_STATE.GAMEOVER;
+        const prev = parseInt(localStorage.getItem('bestScore') || '0', 10);
+        if (player.score > prev) localStorage.setItem('bestScore', player.score);
+      }
       if (collisionResults.didLevelUp) {
         currentState = GAME_STATE.UPGRADING;
         currentUpgradeOptions = player.getUpgradeOptions(3);
