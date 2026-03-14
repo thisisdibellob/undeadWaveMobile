@@ -264,9 +264,13 @@ export function drawGameOverScreen(ctx, canvas, score) {
     ctx.fillStyle = 'white';
     ctx.font = '50px Arial';
     ctx.textAlign = 'center';
-    ctx.fillText('GAME OVER', canvas.width / 2, canvas.height / 2 -60);
+    ctx.fillText('GAME OVER', canvas.width / 2, canvas.height / 2 - 60);
     ctx.font = '30px Arial';
     ctx.fillText(`Score: ${score}`, canvas.width / 2, canvas.height / 2);
+    const best = parseInt(localStorage.getItem('bestScore') || '0', 10);
+    ctx.font = '22px Arial';
+    ctx.fillStyle = '#f4d03f';
+    ctx.fillText(`Best: ${best}`, canvas.width / 2, canvas.height / 2 + 38);
 
     // 게임 오버 시 재시작 버튼 렌더링
     const button = getRestartButtonBounds(canvas);
@@ -287,7 +291,7 @@ export function getRestartButtonBounds(canvas) {
     const width = 220;
     const height = 56;
     const x = canvas.width / 2 - width / 2;
-    const y = canvas.height / 2 + 35;
+    const y = canvas.height / 2 + 75;
     return { x, y, width, height };
 }
 
