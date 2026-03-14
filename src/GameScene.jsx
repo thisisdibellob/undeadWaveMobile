@@ -634,7 +634,7 @@ function GameScene({ bgmRef, onMenu, onRestart }) {
 
       weaponManager.time = timestamp;
       drawUI(ctx, player, weaponManager.shootMod, partsManager.num, weaponManager, timestamp);
-      statUI(isSpace, ctx, player);
+      statUI(ctx, player);
       drawMobileUI(ctx, joystick, rightJoystick, player, weaponManager)
 
       requestRef.current = requestAnimationFrame(update);

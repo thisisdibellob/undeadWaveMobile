@@ -430,12 +430,18 @@ function drawWrappedCenterText(ctx, text, centerX, startY, maxWidth, lineHeight,
 
 
 
-export function statUI(isSpace, ctx, player) {
+export function statUI(ctx, player) {
 
-    const barWidth = window.innerWidth * 1/3;
-    const barHeight = window.innerHeight * 1/2;
-    const barX = window.innerWidth/3;
-    const barY = window.innerHeight * 1/4; 
+    const h = window.innerHeight;
+    const iconSize = h * 0.04;
+    const rowH = h * 0.06;
+    const pad = h * 0.012;
+
+    const textOffX = iconSize + pad * 2;
+    const barWidth = textOffX + h * 0.18;
+    const barHeight = rowH * 6 + pad * 2;
+    const barX = 0;
+    const barY = (h - barHeight) / 2;
 
     const imgHp = new Image();
     const imgAtk = new Image();
@@ -450,34 +456,31 @@ export function statUI(isSpace, ctx, player) {
     imgExp.src = "/assets/resource/stat_image/exp.png";
     imgSpeed.src = "/assets/resource/stat_image/speed.png";
 
-    if (isSpace) 
-    {   
-        // 배경
-        // ctx.fillStyle = 'rgba(0, 0, 0, 0.7)'; 
-        // ctx.fillRect(barX, barY, barWidth, barHeight);
-        roundRect(ctx, barX, barY, barWidth, barHeight, 20);
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.7)'; 
-        ctx.fill();
+    const stats = [
+        { img: imgHp,    label: `${player.hp} / ${player.maxHp}` },
+        { img: imgAtk,   label: `${player.damageLv}` },
+        { img: imgDef,   label: `${player.defense}` },
+        { img: imgLv,    label: `Lv ${player.level}` },
+        { img: imgExp,   label: `${player.exp} / ${player.expToNextLevel}` },
+        { img: imgSpeed, label: `${player.speed}` },
+    ];
 
-        // 이미지 
-        ctx.drawImage(imgHp, barX+180, barY+50, 55, 55); 
-        ctx.drawImage(imgAtk, barX+175, barY+100, 65, 65); 
-        ctx.drawImage(imgDef, barX+180, barY+157, 55, 50);     
-        ctx.drawImage(imgLv, barX+182, barY+215, 50, 50);
-        ctx.drawImage(imgExp, barX+182, barY+270, 50, 50);
-        ctx.drawImage(imgSpeed, barX+170, barY+312, 65, 65); 
- 
-        // 텍스트
-        ctx.fillStyle = 'white';
-        ctx.textAlign = 'left';
-        ctx.font = 'bold 16px Arial';
-        ctx.fillText(`${player.hp} / ${player.maxHp}`, barX+250, barY+80);
-        ctx.fillText(`${player.damageLv}`, barX+250, barY+136);
-        ctx.fillText(`${player.defense}`, barX+250, barY+190);
-        ctx.fillText(`Lv ${player.level}`, barX+250, barY+245);
-        ctx.fillText(`${player.exp} / ${player.expToNextLevel}`, barX+250, barY+300);
-        ctx.fillText(`${player.speed}`, barX+250, barY+353);
-    }
+    // 배경
+    roundRect(ctx, barX, barY, barWidth, barHeight, 12);
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+    ctx.fill();
+
+    // 아이콘 + 텍스트
+    ctx.fillStyle = 'white';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    ctx.font = `bold ${Math.round(h * 0.022)}px Arial`;
+    stats.forEach((s, i) => {
+        const rowY = barY + pad + i * rowH;
+        ctx.drawImage(s.img, pad, rowY + (rowH - iconSize) / 2, iconSize, iconSize);
+        ctx.fillText(s.label, textOffX + pad, rowY + rowH / 2);
+    });
+    ctx.textBaseline = 'alphabetic';
 }
 
 export function drawMobileUI (ctx, joystick, rightJoystick, player, weaponManager) {
