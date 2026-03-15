@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(wc -l /c/GitProject/UndeadWaveMobile/src/logic/*.js)"
+    ]
+  }
+}

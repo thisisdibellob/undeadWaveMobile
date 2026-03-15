@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react';
 
 import { Player } from './logic/Player.js';
 import { World } from './logic/World.js';
-import { drawUI, drawGameOverScreen, drawUpgradeOptions, calculateUpgradeOptionBounds, statUI, drawMobileUI, getRestartButtonBounds, getInGameMenuButtonBounds, drawPauseMenu, getPauseMenuButtonBounds } from './logic/Ui.js';
+import { drawUI, drawGameOverScreen, drawUpgradeOptions, calculateUpgradeOptionBounds, statUI, drawMobileUI, drawInGameStats, getRestartButtonBounds, getInGameMenuButtonBounds, drawPauseMenu, getPauseMenuButtonBounds } from './logic/Ui.js';
 import { EnemyManager } from './logic/EnemyManager.js';
 import { WeaponManager } from './logic/WeaponManager.js';
 import { PartsManager } from './logic/PartsManager.js';
@@ -660,6 +660,7 @@ function GameScene({ bgmRef, onMenu, onRestart }) {
 
       weaponManager.time = timestamp;
       drawUI(ctx, player, weaponManager.shootMod, partsManager.num, weaponManager, timestamp);
+      drawInGameStats(ctx, player);
       statUI(isSpace, ctx, player);
       drawMobileUI(ctx, joystick, rightJoystick, player, weaponManager)
 

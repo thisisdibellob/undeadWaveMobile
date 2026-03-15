@@ -40,6 +40,15 @@ keyR.src = "/assets/startMenu/R.gif";
 const partsImg = new Image();
 partsImg.src =  "/assets/resource/weapon_image/parts.png";
 
+const statHpImg = new Image();
+statHpImg.src = "/assets/resource/stat_image/hp.png";
+const statAtkImg = new Image();
+statAtkImg.src = "/assets/resource/stat_image/atk.png";
+const statDefImg = new Image();
+statDefImg.src = "/assets/resource/stat_image/def.png";
+const statSpdImg = new Image();
+statSpdImg.src = "/assets/resource/stat_image/speed.png";
+
 // 스킬 버튼 이미지
 const dashImg = new Image();
 dashImg.src = "/assets/resource/skill_image/dash.png";
@@ -493,6 +502,41 @@ export function statUI(isSpace, ctx, player) {
         ctx.fillText(`${player.exp} / ${player.expToNextLevel}`, barX+150, txtStartY+gapTxt); gapTxt += imgExpSize + 5;
         ctx.fillText(`${player.speed}`, barX+150, txtStartY+gapTxt);
     }
+}
+
+export function drawInGameStats(ctx, player) {
+    const panelX = 5;
+    const panelY = 103;
+    const panelW = 96;
+    const iconSize = 16;
+    const rowH = 23;
+    const rows = 4;
+    const panelH = rows * rowH + 8;
+    const padding = 5;
+
+    roundRect(ctx, panelX, panelY, panelW, panelH, 8);
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+    ctx.fill();
+
+    const stats = [
+        { img: statHpImg,  label: `${player.hp} / ${player.maxHp}`, color: '#ff6b6b' },
+        { img: statAtkImg, label: `ATK  ${player.damageLv}`,         color: '#ffd93d' },
+        { img: statDefImg, label: `DEF  ${player.defense}`,          color: '#6bcb77' },
+        { img: statSpdImg, label: `SPD  ${player.speed}`,            color: '#4fc3f7' },
+    ];
+
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    ctx.font = 'bold 11px Arial';
+
+    stats.forEach((stat, i) => {
+        const cy = panelY + padding + i * rowH + rowH / 2;
+        ctx.drawImage(stat.img, panelX + padding, cy - iconSize / 2, iconSize, iconSize);
+        ctx.fillStyle = stat.color;
+        ctx.fillText(stat.label, panelX + padding + iconSize + 4, cy);
+    });
+
+    ctx.textBaseline = 'alphabetic';
 }
 
 export function drawMobileUI (ctx, joystick, rightJoystick, player, weaponManager) {
