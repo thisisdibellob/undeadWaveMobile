@@ -1,3 +1,6 @@
+const partsImg = new Image();
+partsImg.src = "/assets/resource/weapon_image/parts.png";
+
 export class Parts {
     constructor(x, y) {
         // 크기
@@ -8,7 +11,6 @@ export class Parts {
         // 스폰 위치
         this.x = x;
         this.y = y;
-
     }
 
 
@@ -17,10 +19,7 @@ export class Parts {
         // 히트박스 (확인용이라 주석 처리)
         // ctx.fillStyle = this.color;
         // ctx.fillRect(this.x, this.y, this.width, this.height);
-        
-        const img = new Image();
-        img.src =  "/assets/resource/weapon_image/parts.png";
-        ctx.drawImage(img, this.x-13, this.y-14, this.width+25, this.height+25);
+        ctx.drawImage(partsImg, this.x-13, this.y-14, this.width+25, this.height+25);
 
     }
 

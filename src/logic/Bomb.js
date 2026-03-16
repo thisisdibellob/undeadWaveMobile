@@ -1,3 +1,6 @@
+const img = new Image();
+img.src = "/assets/resource/bullet_image/explode.png";
+
 export class Bomb {
     
     constructor(mouseX,mouseY,speed, spawntime, player){
@@ -47,8 +50,7 @@ export class Bomb {
         // ctx.fillStyle = this.color;
         // ctx.fillRect(this.x, this.y, this.width, this.height);
 
-        const img = new Image();
-        img.src = "/assets/resource/bullet_image/explode.png";
+        
         ctx.drawImage(img, this.x-50, this.y-30, this.width + 100, this.height + 100);
     }
 
